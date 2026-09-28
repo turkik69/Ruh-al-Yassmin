@@ -13,14 +13,14 @@
 <body>
   <div id="app" class="app-shell">
     <header class="topbar">
-      <div class="brand-wrap">
+      <button class="brand-wrap brand-button" onclick="setRoute('home')" aria-label="العودة للرئيسية">
         <div class="brand-mark"><img src="icon.svg" alt=""></div>
         <div>
           <h1>روح الياسمين</h1>
           <p>مختبرك الشخصي لصناعة العطور</p>
         </div>
-      </div>
-      <span class="brand-chip">Atelier</span>
+      </button>
+      <button class="brand-chip ai-chip" onclick="setRoute('assistant')">✦ AI</button>
     </header>
     <main id="view" class="view"></main>
     <nav class="bottom-nav" aria-label="التنقل الرئيسي">
