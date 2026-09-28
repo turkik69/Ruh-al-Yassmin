@@ -15,9 +15,33 @@ const MATERIALS = [
   {id:'leather',name:'جلد',en:'Leather',family:'جلدي',level:'قاعدة',power:9,life:9,icon:'▰',pairs:['زعفران','عود','عنبر','أرز']},
   {id:'neroli',name:'نيرولي',en:'Neroli',family:'زهري حمضي',level:'افتتاحية',power:5,life:4,icon:'✿',pairs:['برغموت','مسك','ياسمين','صندل']}
 ];
+const SUPPLY_DEFAULTS=[
+ {id:'bergamot-oil',category:'زيوت ومواد عطرية',name:'برغموت',qty:30,unit:'ml',note:'مادة افتتاحية أساسية ومتعددة الاستخدام'},
+ {id:'lemon-oil',category:'زيوت ومواد عطرية',name:'ليمون',qty:30,unit:'ml',note:'للافتتاحيات المنعشة والحمضية'},
+ {id:'lavender-oil',category:'زيوت ومواد عطرية',name:'لافندر',qty:30,unit:'ml',note:'مفيد للتركيبات النظيفة والعطرية'},
+ {id:'jasmine-oil',category:'زيوت ومواد عطرية',name:'ياسمين',qty:10,unit:'ml',note:'قلب زهري فاخر؛ ابدأ بكمية صغيرة'},
+ {id:'rose-oil',category:'زيوت ومواد عطرية',name:'ورد',qty:10,unit:'ml',note:'للقلب الزهري والشرقي'},
+ {id:'cardamom-oil',category:'زيوت ومواد عطرية',name:'هيل',qty:10,unit:'ml',note:'قلب حار ومنعش'},
+ {id:'saffron-oil',category:'زيوت ومواد عطرية',name:'زعفران',qty:10,unit:'ml',note:'للتركيبات الشرقية والجلدية'},
+ {id:'cedar-oil',category:'زيوت ومواد عطرية',name:'خشب الأرز',qty:30,unit:'ml',note:'قاعدة خشبية عملية ومتوازنة'},
+ {id:'sandal-oil',category:'زيوت ومواد عطرية',name:'خشب الصندل',qty:20,unit:'ml',note:'قاعدة كريمية وثابتة'},
+ {id:'oud-oil',category:'زيوت ومواد عطرية',name:'عود',qty:10,unit:'ml',note:'قوي ومكلف عادة؛ يكفي حجم صغير للبداية'},
+ {id:'amber-oil',category:'زيوت ومواد عطرية',name:'عنبر',qty:30,unit:'ml',note:'قاعدة شرقية واسعة الاستخدام'},
+ {id:'vanilla-oil',category:'زيوت ومواد عطرية',name:'فانيلا',qty:20,unit:'ml',note:'لتليين التركيبات وإضافة دفء'},
+ {id:'musk-oil',category:'زيوت ومواد عطرية',name:'مسك',qty:30,unit:'ml',note:'مفيد للثبات والطابع النظيف'},
+ {id:'neroli-oil',category:'زيوت ومواد عطرية',name:'نيرولي',qty:10,unit:'ml',note:'افتتاحية زهرية حمضية'},
+ {id:'ethanol',category:'الكحول والقاعدة',name:'كحول عطري / إيثانول مناسب للعطور',qty:1,unit:'L',note:'اختر درجة مناسبة لصناعة العطور من مورد موثوق'},
+ {id:'storage-30',category:'زجاجات الحفظ',name:'زجاجات زجاجية داكنة 30 ml',qty:20,unit:'حبة',note:'لحفظ التركيبات والتجارب'},
+ {id:'storage-100',category:'زجاجات الحفظ',name:'زجاجات زجاجية داكنة 100 ml',qty:10,unit:'حبة',note:'للدفعات الأكبر'},
+ {id:'sample-10',category:'زجاجات الحفظ',name:'زجاجات عينات 10 ml',qty:30,unit:'حبة',note:'للتجارب والمقارنة بين الإصدارات'},
+ {id:'droppers',category:'القطّارات والأدوات',name:'قطّارات زجاجية مدرجة',qty:20,unit:'حبة',note:'يفضل تخصيص قطّارة لكل مادة قدر الإمكان'},
+ {id:'pipettes',category:'القطّارات والأدوات',name:'ماصّات/قطّارات نقل بلاستيكية',qty:100,unit:'حبة',note:'مناسبة للاستخدام السريع مرة واحدة'},
+ {id:'labels',category:'القطّارات والأدوات',name:'ملصقات مقاومة للكحول',qty:100,unit:'حبة',note:'لتسجيل الاسم والإصدار والتاريخ'}
+];
 const DBKEY='ruhYasminDB_v1';
 const defaultDB={formulas:[],draft:{name:'',mood:'فاخر',occasion:'مسائي',gender:'يونيسكس',notes:[]},theme:'dark'};
 let db=JSON.parse(localStorage.getItem(DBKEY)||'null')||structuredClone(defaultDB);
+if(!Array.isArray(db.supplies))db.supplies=SUPPLY_DEFAULTS.map(x=>({...x,bought:false}));
 let route='home';
 const view=document.getElementById('view');
 const modal=document.getElementById('modal');
@@ -76,7 +100,24 @@ function formulas(){return `${pageHero('تركيباتي','دفتر تركيبا
 function knowledge(){return `${pageHero('المعرفة','مرجعك السريع لفهم الهرم العطري والعائلات والتوافقات','▤','teal')}<div class="knowledge-grid"><button class="lux-panel tone-lilac knowledge-card" onclick="setRoute('materials')"><b>مكتبة المواد</b><small>خصائص المواد وقوتها وثباتها وتوافقاتها</small></button><section class="lux-panel tone-gold knowledge-card"><b>الهرم العطري</b><small>افتتاحية • قلب • قاعدة — ابنِ توازنًا واضحًا لكل تركيبة</small></section><section class="lux-panel tone-pink knowledge-card"><b>التجربة والتعتيق</b><small>سجل ملاحظات كل نسخة قبل الانتقال إلى الإصدار التالي</small></section></div>`}
 function favorites(){const list=db.formulas.slice(0,6);return `${pageHero('المفضلة','مكان سريع للرجوع إلى التركيبات التي تعمل عليها','♡','pink')}${list.length?`<div class="formula-cards material-list">${list.map((f,i)=>`<div class="formula-card formula-tone-${i%4}"><div class="formula-v">${esc(f.version)}</div><div class="formula-copy"><strong>${esc(f.name)}</strong><small>${esc(f.mood)} • ${f.notes.length} مواد</small></div><button class="formula-open" onclick="openFormula('${f.id}')">فتح</button></div>`).join('')}</div>`:'<div class="empty lux-panel tone-pink">عندما تحفظ تركيباتك ستظهر هنا للرجوع السريع.</div>'}`}
 function profile(){return `${pageHero('حسابي','مساحة روح الياسمين الشخصية على هذا الجهاز','♙','gold')}<section class="lux-panel tone-cream profile-card"><div class="profile-logo"><img src="icon.svg" alt=""></div><div><span class="mini-label">مختبر شخصي</span><h3>روح الياسمين</h3><p>تركيبات محفوظة: <b>${db.formulas.length}</b> • مواد المكتبة: <b>${MATERIALS.length}</b></p></div></section>`}
-function settings(){return `${pageHero('الإعدادات','إدارة تجربة التطبيق والبيانات المحلية','⚙','lilac')}<section class="lux-panel tone-lilac"><div class="panel-heading"><div><span class="mini-label">التطبيق</span><h3>روح الياسمين</h3></div><span class="panel-icon">⚙</span></div><p>يتم حفظ تركيباتك محليًا على هذا الجهاز حاليًا.</p><div class="actions"><button class="ghost" onclick="db.theme=db.theme==='light'?'dark':'light';applyTheme();save();render()">تبديل المظهر</button></div></section>`}
+function settings(){return `${pageHero('الإعدادات','إدارة تجربة التطبيق والبيانات المحلية','⚙','lilac')}
+<section class="settings-menu">
+ <button class="setting-card setting-supplies" onclick="setRoute('supplies')"><span class="setting-icon">🧴</span><div><b>تجهيز مختبري</b><small>قائمة الكميات التي تحتاج اقتناءها من الزيوت والكحول والزجاجات والقطّارات</small></div><span class="setting-arrow">←</span></button>
+ <section class="lux-panel tone-lilac"><div class="panel-heading"><div><span class="mini-label">التطبيق</span><h3>روح الياسمين</h3></div><span class="panel-icon">⚙</span></div><p>يتم حفظ تركيباتك وقائمة مشتريات المختبر محليًا على هذا الجهاز حاليًا.</p><div class="actions"><button class="ghost" onclick="db.theme=db.theme==='light'?'dark':'light';applyTheme();save();render()">تبديل المظهر</button></div></section>
+</section>`}
+
+function supplies(){
+ const categories=[...new Set(db.supplies.map(x=>x.category))];
+ const bought=db.supplies.filter(x=>x.bought).length;
+ return `${pageHero('تجهيز مختبري','قائمة شراء شخصية تساعدك على تجهيز مختبر روح الياسمين','🧴','gold')}
+ <section class="supply-summary"><div><span>تم الشراء</span><b>${bought}/${db.supplies.length}</b></div><div class="progress"><span style="width:${Math.round(bought/db.supplies.length*100)}%"></span></div></section>
+ <div class="supply-note">الكميات أدناه نقطة بداية عملية لمختبر شخصي صغير، ويمكنك تعديل أي كمية حسب أسلوبك وعدد تجاربك.</div>
+ ${categories.map(cat=>`<section class="supply-group"><div class="section-title"><h3>${cat}</h3><span>${db.supplies.filter(x=>x.category===cat).length} عناصر</span></div><div class="supply-list">${db.supplies.filter(x=>x.category===cat).map(item=>`<div class="supply-item ${item.bought?'done':''}"><button class="supply-check" onclick="toggleSupply('${item.id}')">${item.bought?'✓':''}</button><div class="supply-copy"><b>${item.name}</b><small>${item.note}</small></div><div class="supply-qty"><input type="number" min="0" step="1" value="${item.qty}" onchange="updateSupplyQty('${item.id}',this.value)"><span>${item.unit}</span></div></div>`).join('')}</div></section>`).join('')}
+ <div class="actions supply-actions"><button class="ghost" onclick="resetSupplies()">إعادة الكميات المقترحة</button><button class="primary" onclick="markAllSupplies(false)">إلغاء علامات الشراء</button></div>`}
+function toggleSupply(id){const x=db.supplies.find(i=>i.id===id);if(!x)return;x.bought=!x.bought;save();render()}
+function updateSupplyQty(id,value){const x=db.supplies.find(i=>i.id===id);if(!x)return;x.qty=Math.max(0,Number(value)||0);save()}
+function resetSupplies(){db.supplies=SUPPLY_DEFAULTS.map(x=>({...x,bought:false}));save();render();toast('تمت إعادة قائمة التجهيز المقترحة')}
+function markAllSupplies(value){db.supplies.forEach(x=>x.bought=value);save();render()}
 
 function assistant(){return `${pageHero('مساعد روح الياسمين','صف عطرك بكلماتك ودع الذكاء الاصطناعي يبني لك نقطة بداية قابلة للتعديل','✦','teal')}
 <section class="ai-stage"><div class="ai-orb">✦</div><div><span class="mini-label">Ruh Al Yassmin AI</span><h3>ماذا تريد أن تصنع اليوم؟</h3><p>اكتب الإحساس، المناسبة، المواد التي تحبها أو ترفضها، والثبات أو الفوحان الذي تتوقعه.</p></div></section>
@@ -106,7 +147,7 @@ async function askPerfumeAI(customPrompt){
 function generateLocalAI(text){const lower=String(text||'').toLowerCase();let ids=['bergamot','neroli','lavender','cedar','sandal','musk'];if(/عود|شرقي|زعفران|عنبر/.test(lower))ids=['bergamot','cardamom','saffron','oud','amber','musk'];else if(/ياسمين|ورد|زهري/.test(lower))ids=['bergamot','neroli','jasmine','rose','sandal','musk'];else if(/جلد|جلدي/.test(lower))ids=['bergamot','cardamom','saffron','leather','oud','amber'];else if(/حلو|فانيلا/.test(lower))ids=['bergamot','lavender','vanilla','amber','sandal','musk'];const weights=[16,14,16,18,18,18];db.draft.notes=ids.map((id,i)=>({id,pct:weights[i]}));if(!db.draft.name)db.draft.name='تركيبة ذكية';save();render()}
 function askAIFromCreate(){const idea=document.getElementById('idea')?.value?.trim();db.draft.name=document.getElementById('fName')?.value||db.draft.name;db.draft.mood=document.getElementById('fMood')?.value||db.draft.mood;db.draft.occasion=document.getElementById('fOcc')?.value||db.draft.occasion;save();setRoute('assistant');if(idea)setTimeout(()=>{const p=document.getElementById('aiPrompt');if(p)p.value=idea;askPerfumeAI(idea)},30)}
 function openAIReview(){const d=`راجع هذه التركيبة الحالية وطورها مع الحفاظ على فكرتها: ${db.draft.name||'بدون اسم'}، الطابع ${db.draft.mood}، الاستخدام ${db.draft.occasion}. المواد الحالية: ${db.draft.notes.map(n=>{const m=MATERIALS.find(x=>x.id===n.id);return m.name+' '+n.pct+'%'}).join('، ')}. أعطني نسخة أكثر توازنًا وثباتًا من نفس مواد المكتبة.`;setRoute('assistant');setTimeout(()=>{const p=document.getElementById('aiPrompt');if(p)p.value=d},30)}
-function render(){view.innerHTML=({home,create,lab,materials,formulas,knowledge,favorites,profile,settings,assistant}[route]||home)();bindDraftInputs();window.scrollTo({top:0,behavior:'instant'})}
+function render(){view.innerHTML=({home,create,lab,materials,formulas,knowledge,favorites,profile,settings,supplies,assistant}[route]||home)();bindDraftInputs();window.scrollTo({top:0,behavior:'instant'})}
 function bindDraftInputs(){['fName','fMood','fOcc'].forEach(id=>{const e=document.getElementById(id);if(!e)return;e.onchange=()=>{if(id==='fName')db.draft.name=e.value;if(id==='fMood')db.draft.mood=e.value;if(id==='fOcc')db.draft.occasion=e.value;save()}})}
 function totalPct(){return Math.round(db.draft.notes.reduce((a,n)=>a+Number(n.pct||0),0)*10)/10}
 function updatePct(i,v){db.draft.notes[i].pct=Math.max(0,Number(v)||0);save();render()}
