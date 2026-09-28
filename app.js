@@ -312,5 +312,35 @@ function loadFormula(id){const f=db.formulas.find(x=>x.id===id);db.draft={name:f
 function deleteFormula(id){db.formulas=db.formulas.filter(x=>x.id!==id);save();modal.close();render();toast('تم حذف التركيبة')}
 function materialInfo(id){const m=MATERIALS.find(x=>x.id===id);modalContent.innerHTML=`<h3>${m.icon} ${m.name}</h3><p>${m.en}</p><div class="grid"><div class="card"><p>الطبقة</p><b>${m.level}</b></div><div class="card"><p>العائلة</p><b>${m.family}</b></div><div class="card"><p>القوة</p><b>${m.power}/10</b></div><div class="card"><p>الثبات</p><b>${m.life}/10</b></div></div><p style="margin-top:16px">يتناغم مع: ${m.pairs.map(x=>`<span class="tag">${x}</span>`).join('')}</p><button class="primary" onclick="addMaterial('${m.id}',5);modal.close()">أضف للمختبر</button> <button class="ghost" onclick="modal.close()">إغلاق</button>`;modal.showModal()}
 function filterMaterials(q){q=q.trim().toLowerCase();const a=MATERIALS.filter(m=>[m.name,m.en,m.family,m.level].join(' ').toLowerCase().includes(q));document.getElementById('materialList').innerHTML=materialsHTML(a)}
-if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});
+if('serviceWorker' in navigator){
+  window.addEventListener('load',async()=>{
+    try{
+      const reg=await navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'});
+      await reg.update();
+
+      if(reg.waiting) reg.waiting.postMessage({type:'SKIP_WAITING'});
+
+      reg.addEventListener('updatefound',()=>{
+        const worker=reg.installing;
+        if(!worker)return;
+        worker.addEventListener('statechange',()=>{
+          if(worker.state==='installed' && navigator.serviceWorker.controller){
+            worker.postMessage({type:'SKIP_WAITING'});
+          }
+        });
+      });
+
+      let reloading=false;
+      navigator.serviceWorker.addEventListener('controllerchange',()=>{
+        if(reloading)return;
+        reloading=true;
+        window.location.reload();
+      });
+
+      document.addEventListener('visibilitychange',()=>{
+        if(document.visibilityState==='visible')reg.update().catch(()=>{});
+      });
+    }catch(e){}
+  });
+}
 render();
