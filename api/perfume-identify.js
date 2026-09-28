@@ -47,7 +47,7 @@ export default async function handler(req,res){
       'Content-Type':'application/json'
     },
     body:JSON.stringify({
-      model:process.env.OPENAI_MODEL||'gpt-5.5',
+      model:process.env.OPENAI_MODEL||'gpt-5.6-luna',
       tools:[{type:'web_search'}],
       tool_choice:'auto',
       include:['web_search_call.action.sources'],
