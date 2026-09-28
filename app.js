@@ -91,6 +91,7 @@ function home(){
    <button class="home-tile tile-gold art-card" onclick="setRoute('formulas')"><span class="card-art art-book">▤</span><span class="tile-copy"><b>تركيباتي</b><small>احفظ وأدر تركيباتك الخاصة وإصداراتها</small></span><span class="tile-icon">→</span></button>
    <button class="home-tile tile-rose art-card" onclick="setRoute('favorites')"><span class="card-art art-eval">♡</span><span class="tile-copy"><b>التقييم</b><small>قيّم التركيبات وسجل ملاحظاتك الحسية</small></span><span class="tile-icon">→</span></button>
    <button class="home-tile tile-amber art-card" onclick="setRoute('lab')"><span class="card-art art-batch">⚗</span><span class="tile-copy"><b>دفعات الخلط</b><small>تابع دفعات الخلط واحسب كميات الإنتاج</small></span><span class="tile-icon">→</span></button>
+   <button class="home-tile tile-supply art-card full-home-tile" onclick="setRoute('supplies')"><span class="card-art art-supply">🧴</span><span class="tile-copy"><b>تجهيزات مختبري</b><small>تابع الزيوت والكحول والزجاجات والقطّارات والكميات المتبقية في مخزونك</small></span><span class="tile-icon">→</span></button>
  </div>
  <section class="journey concept-journey"><div><b>رحلة لا تنتهي من الإبداع</b><small>اكتشف • امزج • جرّب • واصنع قصتك العطرية</small></div><span>✿</span></section>`
 }
@@ -128,7 +129,6 @@ function favorites(){const list=db.formulas.slice(0,6);return `${pageHero('ال�
 function profile(){return `${pageHero('حسابي','مساحة روح الياسمين الشخصية على هذا الجهاز','♙','gold')}<section class="lux-panel tone-cream profile-card"><div class="profile-logo"><img src="icon.svg" alt=""></div><div><span class="mini-label">مختبر شخصي</span><h3>روح الياسمين</h3><p>تركيبات محفوظة: <b>${db.formulas.length}</b> • مواد المكتبة: <b>${MATERIALS.length}</b></p></div></section>`}
 function settings(){return `${pageHero('الإعدادات','إدارة تجربة التطبيق والبيانات المحلية','⚙','lilac')}
 <section class="settings-menu">
- <button class="setting-card setting-supplies" onclick="setRoute('supplies')"><span class="setting-icon">🧴</span><div><b>تجهيز مختبري</b><small>قائمة الكميات التي تحتاج اقتناءها من الزيوت والكحول والزجاجات والقطّارات</small></div><span class="setting-arrow">←</span></button>
  <section class="lux-panel tone-lilac"><div class="panel-heading"><div><span class="mini-label">التطبيق</span><h3>روح الياسمين</h3></div><span class="panel-icon">⚙</span></div><p>يتم حفظ تركيباتك وقائمة مشتريات المختبر محليًا على هذا الجهاز حاليًا.</p><div class="actions"><button class="ghost" onclick="db.theme=db.theme==='light'?'dark':'light';applyTheme();save();render()">تبديل المظهر</button></div></section>
 </section>`}
 
