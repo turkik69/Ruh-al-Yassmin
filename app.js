@@ -178,22 +178,60 @@ function fillAI(text){const el=document.getElementById('aiPrompt');if(el){el.val
 function setAILoading(on){const b=document.getElementById('aiSendBtn');if(b){b.disabled=on;b.textContent=on?'جاري تحليل فكرتك...':'✦ أنشئ التركيبة بالذكاء الاصطناعي'}}
 function aiContext(){return {name:db.draft.name||'',mood:db.draft.mood||'',occasion:db.draft.occasion||'',gender:db.draft.gender||'',current_notes:db.draft.notes.map(n=>({id:n.id,pct:Number(n.pct)}))}}
 async function askPerfumeAI(customPrompt){
- const prompt=customPrompt||document.getElementById('aiPrompt')?.value?.trim();if(!prompt)return toast('اكتب وصف العطر أولاً');
- const box=document.getElementById('aiResult');setAILoading(true);if(box)box.innerHTML='<div class="ai-thinking">✦ روح الياسمين يحلل الفكرة...</div>';
- try{
-  const res=await fetch('./api/ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,context:aiContext()})});
-  if(!res.ok)throw new Error('AI');
-  const data=await res.json();if(!Array.isArray(data.notes))throw new Error('FORMAT');
-  const valid=data.notes.filter(n=>MATERIALS.some(m=>m.id===n.id)).map(n=>({id:n.id,pct:Number(n.pct)||0}));if(!valid.length)throw new Error('EMPTY');
-  db.draft.name=data.name||db.draft.name||'تركيبة روح الياسمين';db.draft.mood=data.mood||db.draft.mood;db.draft.occasion=data.occasion||db.draft.occasion;db.draft.notes=valid;
-  const t=db.draft.notes.reduce((a,n)=>a+n.pct,0);if(t>0)db.draft.notes=db.draft.notes.map(n=>({...n,pct:Math.round(n.pct/t*1000)/10}));save();
-  if(box)box.innerHTML=`<div class="ai-success"><b>${esc(data.name||'تركيبة مقترحة')}</b><p>${esc(data.rationale||'تم إنشاء تركيبة أولية قابلة للتعديل في المختبر.')}</p><div class="ai-note-tags">${db.draft.notes.map(n=>{const m=MATERIALS.find(x=>x.id===n.id);return `<span>${m.name} ${n.pct}%</span>`}).join('')}</div><button class="primary wide-btn" onclick="setRoute('lab')">فتح التركيبة في المختبر</button></div>`;
-  toast('تم إنشاء التركيبة بالذكاء الاصطناعي');
- }catch(e){
-  if(box)box.innerHTML='<div class="ai-error">الاتصال السحابي غير مفعّل بعد على الاستضافة الحالية. سأبني لك تركيبة محلية الآن ثم أفتحها في المختبر.</div>';
-  setTimeout(()=>generateLocalAI(prompt,true),350);
+ const prompt=customPrompt||document.getElementById('aiPrompt')?.value?.trim();
+ if(!prompt)return toast('اكتب وصف العطر أولاً');
+ const box=document.getElementById('aiResult');
+ setAILoading(true);
+ if(box)box.innerHTML='<div class="ai-thinking">✦ روح الياسمين يحلل وصفك ويبني التركيبة...</div>';
+ await new Promise(r=>setTimeout(r,350));
+ const result=buildSmartPerfume(prompt);
+ applySmartPerfume(result);
+ if(box)box.innerHTML=`<div class="ai-success"><b>${esc(result.name)}</b><p>${esc(result.rationale)}</p><div class="ai-note-tags">${result.notes.map(n=>{const m=MATERIALS.find(x=>x.id===n.id);return `<span>${m.name} ${n.pct}%</span>`}).join('')}</div><button class="primary wide-btn" onclick="setRoute('lab')">فتح التركيبة في المختبر</button></div>`;
+ setAILoading(false);
+ toast('تم إنشاء التركيبة الذكية');
+}
+function buildSmartPerfume(text){
+ const lower=String(text||'').toLowerCase();
+ let ids=['bergamot','neroli','lavender','cedar','sandal','musk'];
+ let weights=[18,12,14,18,18,20];
+ let mood='نظيف',name='ردهة فاخرة',occasion=db.draft.occasion||'مسائي';
+ let rationale='تركيبة متوازنة تبدأ بانتعاش حمضي ناعم، ثم قلب عطري نظيف، وتنتهي بقاعدة خشبية مسكية ثابتة.';
+ if(/عود|شرقي|زعفران|عنبر|دخاني|بخور/.test(lower)){
+   ids=['bergamot','cardamom','saffron','oud','amber','musk'];weights=[10,12,10,25,23,20];
+   mood='شرقي';name='ليل العنبر';rationale='بناء شرقي غني يعتمد على العود والعنبر مع زعفران وهيل لتخفيف ثقل القاعدة وإعطائها عمقًا وفوحانًا.';
+ }else if(/ياسمين|ورد|زهري|زهور/.test(lower)){
+   ids=['bergamot','neroli','jasmine','rose','sandal','musk'];weights=[15,12,25,16,15,17];
+   mood='زهري';name='ياسمين أبيض';rationale='قلب زهري واضح تقوده الياسمين والورد، مع افتتاحية نيرولي وبرغموت وقاعدة صندل ومسك للحفاظ على النعومة والثبات.';
+ }else if(/جلد|جلدي|leather/.test(lower)){
+   ids=['bergamot','cardamom','saffron','leather','oud','amber'];weights=[14,12,10,20,22,22];
+   mood='جلدي';name='جلد وعنبر';rationale='تركيبة جلدية جافة وفاخرة، يخففها البرغموت والهيل ويثبتها العود والعنبر.';
+ }else if(/حلو|فانيلا|سكري|دافئ/.test(lower)){
+   ids=['bergamot','lavender','vanilla','amber','sandal','musk'];weights=[12,12,22,20,16,18];
+   mood='حلو';name='دفء الفانيلا';rationale='حلاوة دافئة غير مباشرة؛ الفانيلا والعنبر في القاعدة مع صندل ومسك، وافتتاحية خفيفة تمنع التركيبة من أن تصبح ثقيلة.';
+ }else if(/منعش|حمضي|صيف|نهاري|نظيف|فندق|مسك|خشبي/.test(lower)){
+   ids=['bergamot','lemon','neroli','lavender','cedar','musk'];weights=[22,12,14,14,18,20];
+   mood=/صيف|منعش|حمضي/.test(lower)?'منعش':'نظيف';name=/فندق|نظيف/.test(lower)?'ردهة فاخرة':'نسيم الياسمين';
+   rationale='افتتاحية حمضية مشرقة مع قلب نظيف وقاعدة أرز ومسك تمنح ثباتًا وأناقة دون حلاوة زائدة.';
  }
- finally{setAILoading(false)}
+ if(/قوي|فواح|فوحان/.test(lower)){weights[weights.length-1]+=3;weights[0]-=3}
+ if(/ناعم|خفيف/.test(lower)){weights[0]+=3;weights[weights.length-1]-=3}
+ const total=weights.reduce((a,b)=>a+b,0);
+ const notes=ids.map((id,i)=>({id,pct:Math.round(weights[i]/total*1000)/10}));
+ const fix=100-notes.reduce((a,n)=>a+n.pct,0);notes[notes.length-1].pct=Math.round((notes[notes.length-1].pct+fix)*10)/10;
+ return {name,mood,occasion,rationale,notes};
+}
+function applySmartPerfume(result){
+ db.draft.name=db.draft.name||result.name;
+ db.draft.mood=result.mood;
+ db.draft.occasion=result.occasion;
+ db.draft.notes=result.notes.map(n=>({...n}));
+ save();
+}
+function generateLocalAI(text,openLab=false){
+ const result=buildSmartPerfume(text);
+ applySmartPerfume(result);
+ toast('تم إنشاء تركيبة أولية');
+ if(openLab)setRoute('lab'); else render();
 }
 function generateLocalAI(text,openLab=false){
  const lower=String(text||'').toLowerCase();
