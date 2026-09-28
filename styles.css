@@ -236,3 +236,15 @@ html,body{background:linear-gradient(180deg,#f8f2e9 0%,#f4e8dc 100%)}
   .tile-supply{min-height:132px}
   .tile-supply .tile-copy small{max-width:220px}
 }
+
+/* Stage 9 — perfume photo clone */
+.tile-clone{background:linear-gradient(145deg,#2f2149,#9d6fd1);color:#fff}
+.tile-clone .tile-copy small{max-width:320px;color:#f3e9ff}
+.art-clone{background:linear-gradient(145deg,rgba(255,255,255,.22),rgba(255,255,255,.1));color:#fff}
+.clone-capture{display:grid;gap:14px}
+.camera-drop{border:1.5px dashed #c6a8d9;border-radius:22px;min-height:170px;padding:24px;display:grid;place-items:center;text-align:center;gap:7px;background:linear-gradient(145deg,#fff9f4,#f1e6fa);cursor:pointer}
+.camera-drop input{display:none}.camera-icon{width:62px;height:62px;border-radius:20px;display:grid;place-items:center;font-size:34px;background:linear-gradient(145deg,#7550bf,#d16ab6);color:#fff;box-shadow:0 10px 24px rgba(105,71,164,.22)}
+.camera-drop b{font-size:16px}.camera-drop small{font-size:11px;color:#7c6c75;line-height:1.5}
+.clone-preview{position:relative}.clone-preview:empty{display:none}.clone-preview img{width:100%;max-height:330px;object-fit:contain;border-radius:22px;background:#1d1823;box-shadow:var(--shadow)}.clone-preview button{position:absolute;top:10px;left:10px;width:36px;height:36px;border:0;border-radius:50%;background:rgba(0,0,0,.62);color:#fff;font-size:22px}
+.clone-found{border-radius:22px;padding:16px;background:linear-gradient(145deg,#f5ebff,#fff8ef);border:1px solid #e2d4e8}.clone-title span{font-size:10px;color:#83649c}.clone-title h3{margin:3px 0 10px}.clone-notes{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 12px}.clone-notes span{padding:6px 9px;border-radius:999px;background:#fff;border:1px solid #e8dce9;font-size:11px}.clone-found p{font-size:12px;line-height:1.7;color:#6f6168}.clone-sources{display:grid;gap:6px;margin-top:12px}.clone-sources a{font-size:11px;color:#356d82;text-decoration:none;overflow-wrap:anywhere}.clone-info p{margin-bottom:0;line-height:1.7;font-size:12px}
+@media(max-width:430px){.camera-drop{min-height:150px;padding:18px}.tile-clone .tile-copy small{max-width:230px}}
