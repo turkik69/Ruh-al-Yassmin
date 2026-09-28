@@ -63,6 +63,12 @@ function setRoute(r){
  route=r;
  document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active',b.dataset.route===r));
  render();
+ window.scrollTo({top:0,behavior:'instant'});
+}
+function renderKeepScroll(){
+ const y=window.scrollY;
+ render();
+ requestAnimationFrame(()=>window.scrollTo({top:y,behavior:'instant'}));
 }
 window.setRoute=setRoute;
 document.addEventListener('click',e=>{
@@ -149,17 +155,17 @@ function toggleSupply(id){
  x.bought=!x.bought;
  if(x.bought){x.capacity=Number(x.qty)||0;x.remaining=Number(x.qty)||0}
  else{x.remaining=0}
- save();render()
+ save();renderKeepScroll()
 }
 function updateSupplyQty(id,value){
  const x=db.supplies.find(i=>i.id===id);if(!x)return;
  const oldCap=Number(x.capacity||x.qty||0),oldRemaining=Number(x.remaining||0),next=Math.max(0,Number(value)||0);
  x.qty=next;x.capacity=next;
  if(x.bought){x.remaining=(Math.abs(oldRemaining-oldCap)<0.0001)?next:Math.min(oldRemaining,next)}
- save();render()
+ save();renderKeepScroll()
 }
 function resetSupplies(){db.supplies=SUPPLY_DEFAULTS.map(x=>({...x,bought:false,remaining:0,capacity:x.qty}));db.usageHistory=[];save();render();toast('تمت إعادة قائمة التجهيز والمخزون')}
-function markAllSupplies(value){db.supplies.forEach(x=>{x.bought=value;x.capacity=Number(x.qty)||0;x.remaining=value?(Number(x.qty)||0):0});save();render()}
+function markAllSupplies(value){db.supplies.forEach(x=>{x.bought=value;x.capacity=Number(x.qty)||0;x.remaining=value?(Number(x.qty)||0):0});save();renderKeepScroll()}
 
 function assistant(){return `${pageHero('مساعد روح الياسمين','صف عطرك بكلماتك ودع الذكاء الاصطناعي يبني لك نقطة بداية قابلة للتعديل','✦','teal')}
 <section class="ai-stage"><div class="ai-orb">✦</div><div><span class="mini-label">Ruh Al Yassmin AI</span><h3>ماذا تريد أن تصنع اليوم؟</h3><p>اكتب الإحساس، المناسبة، المواد التي تحبها أو ترفضها، والثبات أو الفوحان الذي تتوقعه.</p></div></section>
@@ -189,7 +195,7 @@ async function askPerfumeAI(customPrompt){
 function generateLocalAI(text){const lower=String(text||'').toLowerCase();let ids=['bergamot','neroli','lavender','cedar','sandal','musk'];if(/عود|شرقي|زعفران|عنبر/.test(lower))ids=['bergamot','cardamom','saffron','oud','amber','musk'];else if(/ياسمين|ورد|زهري/.test(lower))ids=['bergamot','neroli','jasmine','rose','sandal','musk'];else if(/جلد|جلدي/.test(lower))ids=['bergamot','cardamom','saffron','leather','oud','amber'];else if(/حلو|فانيلا/.test(lower))ids=['bergamot','lavender','vanilla','amber','sandal','musk'];const weights=[16,14,16,18,18,18];db.draft.notes=ids.map((id,i)=>({id,pct:weights[i]}));if(!db.draft.name)db.draft.name='تركيبة ذكية';save();render()}
 function askAIFromCreate(){const idea=document.getElementById('idea')?.value?.trim();db.draft.name=document.getElementById('fName')?.value||db.draft.name;db.draft.mood=document.getElementById('fMood')?.value||db.draft.mood;db.draft.occasion=document.getElementById('fOcc')?.value||db.draft.occasion;save();setRoute('assistant');if(idea)setTimeout(()=>{const p=document.getElementById('aiPrompt');if(p)p.value=idea;askPerfumeAI(idea)},30)}
 function openAIReview(){const d=`راجع هذه التركيبة الحالية وطورها مع الحفاظ على فكرتها: ${db.draft.name||'بدون اسم'}، الطابع ${db.draft.mood}، الاستخدام ${db.draft.occasion}. المواد الحالية: ${db.draft.notes.map(n=>{const m=MATERIALS.find(x=>x.id===n.id);return m.name+' '+n.pct+'%'}).join('، ')}. أعطني نسخة أكثر توازنًا وثباتًا من نفس مواد المكتبة.`;setRoute('assistant');setTimeout(()=>{const p=document.getElementById('aiPrompt');if(p)p.value=d},30)}
-function render(){view.innerHTML=({home,create,lab,materials,formulas,knowledge,favorites,profile,settings,supplies,assistant}[route]||home)();bindDraftInputs();window.scrollTo({top:0,behavior:'instant'})}
+function render(){view.innerHTML=({home,create,lab,materials,formulas,knowledge,favorites,profile,settings,supplies,assistant}[route]||home)();bindDraftInputs()}
 function bindDraftInputs(){['fName','fMood','fOcc'].forEach(id=>{const e=document.getElementById(id);if(!e)return;e.onchange=()=>{if(id==='fName')db.draft.name=e.value;if(id==='fMood')db.draft.mood=e.value;if(id==='fOcc')db.draft.occasion=e.value;save()}})}
 function totalPct(){return Math.round(db.draft.notes.reduce((a,n)=>a+Number(n.pct||0),0)*10)/10}
 function updatePct(i,v){db.draft.notes[i].pct=Math.max(0,Number(v)||0);save();render()}
