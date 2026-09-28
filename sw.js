@@ -1,4 +1,4 @@
-const CACHE='ruh-yasmin-v15';
+const CACHE='ruh-yasmin-v16';
 const ASSETS=['./','./index.html','./styles.css','./app.js','./manifest.webmanifest','./icon.svg','./hero-ui.jpg','./hero-art.svg'];
 
 self.addEventListener('install',event=>{
