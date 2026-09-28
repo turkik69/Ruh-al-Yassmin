@@ -73,3 +73,29 @@ html,body{background:linear-gradient(180deg,#f8f2e9 0%,#f4e8dc 100%)}
 .knowledge-grid{display:grid;gap:12px}.knowledge-card{border:0;text-align:right;color:var(--text);display:grid;gap:7px}.knowledge-card b{font-size:19px}.knowledge-card small{line-height:1.7;color:#6e615b}.profile-card{display:flex;gap:14px;align-items:center}.profile-logo{width:82px;height:82px;border-radius:24px;overflow:hidden;box-shadow:var(--shadow)}.profile-logo img{width:100%;height:100%;object-fit:cover}
 .bottom-nav{border-radius:24px 24px 0 0;box-shadow:0 -8px 24px rgba(62,38,30,.08)}.nav-home span{width:44px!important;height:44px!important;border:4px solid #f6e4c1;box-shadow:0 6px 16px rgba(183,137,62,.3)}.nav-item small{font-size:10px}
 @media(max-width:430px){.concept-hero,.concept-hero img{height:385px;min-height:385px}.concept-copy{padding:90px 20px 20px}.concept-copy h2{font-size:32px}.art-card{min-height:152px;padding:15px}.card-art{width:60px;height:60px;left:14px;bottom:14px;font-size:31px}.tile-copy small{max-width:145px}}
+
+/* Stage 4 — interactive icons + AI assistant */
+.brand-button{border:0;background:transparent;color:inherit;text-align:right;padding:0}
+.ai-chip{cursor:pointer;font-weight:800}
+.subpage-orb{border:0;color:inherit;cursor:pointer}
+.material-icon-btn{border:0;cursor:pointer;color:inherit}
+.ai-action{border:0;border-radius:16px;padding:13px 18px;font-weight:800;color:#fff;background:linear-gradient(135deg,#5f36c8,#c12ea4);box-shadow:0 8px 22px rgba(104,48,175,.2)}
+.ai-stage{border-radius:28px;padding:20px;margin-bottom:14px;background:linear-gradient(135deg,#111d3f,#26144b);color:#fff;display:flex;gap:15px;align-items:center;box-shadow:var(--shadow)}
+.ai-stage h3{margin:2px 0 5px;font-size:21px}
+.ai-stage p{margin:0;opacity:.78;font-size:12px;line-height:1.65}
+.ai-stage .mini-label{color:#ddb7ff}
+.ai-orb{flex:0 0 64px;width:64px;height:64px;border-radius:22px;display:grid;place-items:center;font-size:32px;background:linear-gradient(145deg,#7c4df0,#d43ca9);box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 10px 28px rgba(96,50,180,.4)}
+.ai-console{display:grid;gap:13px}
+.ai-shortcuts{display:flex;gap:7px;flex-wrap:wrap}
+.ai-main-btn{width:100%;border:0;border-radius:17px;padding:15px;font-weight:800;color:#fff;background:linear-gradient(135deg,#5134b7,#c52f9f);box-shadow:0 10px 25px rgba(100,48,165,.22)}
+.ai-main-btn:disabled{opacity:.6}
+.ai-result{display:grid;gap:10px}
+.ai-thinking,.ai-error,.ai-success{border-radius:17px;padding:14px;background:rgba(255,255,255,.48)}
+.ai-error{color:#8d3540;background:#ffe3e6}
+.ai-success b{font-size:18px}
+.ai-success p{line-height:1.7;color:#675b55}
+.ai-note-tags{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}
+.ai-note-tags span{background:#fff8ee;border:1px solid #e7d4bd;border-radius:999px;padding:6px 9px;font-size:11px}
+.nav-item{min-height:58px}
+.nav-item span,.nav-item small{pointer-events:none}
+.home-tile,.formula-open,.material-premium button,.knowledge-card,.brand-button,.ai-chip,.subpage-orb{touch-action:manipulation}
