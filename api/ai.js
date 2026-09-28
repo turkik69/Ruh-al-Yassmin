@@ -19,7 +19,7 @@ export default async function handler(req,res){
     method:'POST',
     headers:{'Authorization':'Bearer '+process.env.OPENAI_API_KEY,'Content-Type':'application/json'},
     body:JSON.stringify({
-      model:process.env.OPENAI_MODEL||'gpt-6-astra',
+      model:process.env.OPENAI_MODEL||'gpt-5.6-luna',
       input:[
         {role:'system',content:instructions},
         {role:'user',content:JSON.stringify({request:prompt,context})}
