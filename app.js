@@ -295,10 +295,31 @@ async function askPerfumeAI(customPrompt){
  const box=document.getElementById('aiResult');
  setAILoading(true);
  if(box)box.innerHTML='<div class="ai-thinking">✦ روح الياسمين يحلل وصفك ويبني التركيبة...</div>';
- await new Promise(r=>setTimeout(r,350));
+
+ if(db.backend?.enabled){
+   try{
+     const res=await fetch(apiUrl('/api/ai'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,context:aiContext()})});
+     if(res.ok){
+       const data=await res.json();
+       const valid=(data.notes||[]).filter(n=>MATERIALS.some(m=>m.id===n.id)).map(n=>({id:n.id,pct:Number(n.pct)||0}));
+       if(valid.length){
+         const total=valid.reduce((a,n)=>a+n.pct,0)||1;
+         data.notes=valid.map(n=>({...n,pct:Math.round(n.pct/total*1000)/10}));
+         const fix=100-data.notes.reduce((a,n)=>a+n.pct,0);
+         data.notes[data.notes.length-1].pct=Math.round((data.notes[data.notes.length-1].pct+fix)*10)/10;
+         applySmartPerfume(data);
+         if(box)box.innerHTML=`<div class="ai-success"><b>${esc(data.name||'تركيبة ذكية')}</b><p>${esc(data.rationale||'تم إنشاء تركيبة قابلة للتعديل داخل المختبر.')}</p><div class="ai-note-tags">${data.notes.map(n=>{const m=MATERIALS.find(x=>x.id===n.id);return `<span>${m.name} ${n.pct}%</span>`}).join('')}</div><button class="primary wide-btn" onclick="setRoute('lab')">فتح التركيبة في المختبر</button></div>`;
+         db.backend.lastStatus='online';save();setAILoading(false);toast('تم إنشاء التركيبة بالذكاء الاصطناعي السحابي');return;
+       }
+     }
+     db.backend.lastStatus='offline';save();
+   }catch(e){db.backend.lastStatus='offline';save()}
+ }
+
+ await new Promise(r=>setTimeout(r,250));
  const result=buildSmartPerfume(prompt);
  applySmartPerfume(result);
- if(box)box.innerHTML=`<div class="ai-success"><b>${esc(result.name)}</b><p>${esc(result.rationale)}</p><div class="ai-note-tags">${result.notes.map(n=>{const m=MATERIALS.find(x=>x.id===n.id);return `<span>${m.name} ${n.pct}%</span>`}).join('')}</div><button class="primary wide-btn" onclick="setRoute('lab')">فتح التركيبة في المختبر</button></div>`;
+ if(box)box.innerHTML=`<div class="ai-success"><b>${esc(result.name)}</b><p>${esc(result.rationale)}</p><div class="ai-note-tags">${result.notes.map(n=>{const m=MATERIALS.find(x=>x.id===n.id);return `<span>${m.name} ${n.pct}%</span>`}).join('')}</div><small class="backend-help">تم استخدام المحرك المحلي لأن Backend غير متاح.</small><button class="primary wide-btn" onclick="setRoute('lab')">فتح التركيبة في المختبر</button></div>`;
  setAILoading(false);
  toast('تم إنشاء التركيبة الذكية');
 }
