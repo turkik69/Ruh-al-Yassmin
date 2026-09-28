@@ -168,7 +168,7 @@ function resetSupplies(){db.supplies=SUPPLY_DEFAULTS.map(x=>({...x,bought:false,
 function markAllSupplies(value){db.supplies.forEach(x=>{x.bought=value;x.capacity=Number(x.qty)||0;x.remaining=value?(Number(x.qty)||0):0});save();renderKeepScroll()}
 
 function assistant(){return `${pageHero('مساعد روح الياسمين','صف عطرك بكلماتك ودع الذكاء الاصطناعي يبني لك نقطة بداية قابلة للتعديل','✦','teal')}
-<section class="ai-stage"><div class="ai-orb">✦</div><div><span class="mini-label">Ruh Al Yassmin AI</span><h3>ماذا تريد أن تصنع اليوم؟</h3><p>اكتب الإحساس، المناسبة، المواد التي تحبها أو ترفضها، والثبات أو الفوحان الذي تتوقعه.</p></div></section>
+<section class="ai-stage"><div class="ai-orb">✦</div><div><span class="mini-label">Ruh Al Yassmin AI</span><h3>ماذا تريد أن تصنع اليوم؟</h3><p>اكتب الإحساس، المناسبة، المواد التي تحبها أو ترفضها، والثبات أو الفوحان الذي تتوقعه.</p><div class="ai-status local">وضع احتياطي محلي فعال • الربط السحابي يحتاج Backend</div></div></section>
 <section class="lux-panel tone-cream ai-console">
 <div class="field"><label>وصف العطر</label><textarea id="aiPrompt" placeholder="مثال: أريد عطرًا فاخرًا نظيفًا للمساء، افتتاحيته حمضية خفيفة، قلبه ياسمين وهيل، وقاعدته خشبية مع مسك وثبات مرتفع."></textarea></div>
 <div class="ai-shortcuts"><button class="chip" onclick="fillAI('عطر نظيف وفاخر بأجواء لوبي فندق راقٍ، خشبي ومسكي وغير حلو')">فندقي نظيف</button><button class="chip" onclick="fillAI('عطر شرقي فاخر للمساء، عود وزعفران وعنبر، قوي لكن متوازن')">شرقي فاخر</button><button class="chip" onclick="fillAI('عطر ياسمين أبيض منعش وناعم للاستخدام اليومي، غير سكري')">ياسمين منعش</button></div>
@@ -189,10 +189,30 @@ async function askPerfumeAI(customPrompt){
   const t=db.draft.notes.reduce((a,n)=>a+n.pct,0);if(t>0)db.draft.notes=db.draft.notes.map(n=>({...n,pct:Math.round(n.pct/t*1000)/10}));save();
   if(box)box.innerHTML=`<div class="ai-success"><b>${esc(data.name||'تركيبة مقترحة')}</b><p>${esc(data.rationale||'تم إنشاء تركيبة أولية قابلة للتعديل في المختبر.')}</p><div class="ai-note-tags">${db.draft.notes.map(n=>{const m=MATERIALS.find(x=>x.id===n.id);return `<span>${m.name} ${n.pct}%</span>`}).join('')}</div><button class="primary wide-btn" onclick="setRoute('lab')">فتح التركيبة في المختبر</button></div>`;
   toast('تم إنشاء التركيبة بالذكاء الاصطناعي');
- }catch(e){if(box)box.innerHTML='<div class="ai-error">تعذر الاتصال بالمساعد السحابي الآن. تم استخدام المساعد المحلي كبديل.</div>';generateLocalAI(prompt)}
+ }catch(e){
+  if(box)box.innerHTML='<div class="ai-error">الاتصال السحابي غير مفعّل بعد على الاستضافة الحالية. سأبني لك تركيبة محلية الآن ثم أفتحها في المختبر.</div>';
+  setTimeout(()=>generateLocalAI(prompt,true),350);
+ }
  finally{setAILoading(false)}
 }
-function generateLocalAI(text){const lower=String(text||'').toLowerCase();let ids=['bergamot','neroli','lavender','cedar','sandal','musk'];if(/عود|شرقي|زعفران|عنبر/.test(lower))ids=['bergamot','cardamom','saffron','oud','amber','musk'];else if(/ياسمين|ورد|زهري/.test(lower))ids=['bergamot','neroli','jasmine','rose','sandal','musk'];else if(/جلد|جلدي/.test(lower))ids=['bergamot','cardamom','saffron','leather','oud','amber'];else if(/حلو|فانيلا/.test(lower))ids=['bergamot','lavender','vanilla','amber','sandal','musk'];const weights=[16,14,16,18,18,18];db.draft.notes=ids.map((id,i)=>({id,pct:weights[i]}));if(!db.draft.name)db.draft.name='تركيبة ذكية';save();render()}
+function generateLocalAI(text,openLab=false){
+ const lower=String(text||'').toLowerCase();
+ let ids=['bergamot','neroli','lavender','cedar','sandal','musk'];
+ let weights=[16,14,16,18,18,18];
+ let mood='فاخر',name='تركيبة ذكية';
+ if(/عود|شرقي|زعفران|عنبر/.test(lower)){ids=['bergamot','cardamom','saffron','oud','amber','musk'];weights=[12,12,10,24,22,20];mood='شرقي';name='ليل شرقي'}
+ else if(/ياسمين|ورد|زهري/.test(lower)){ids=['bergamot','neroli','jasmine','rose','sandal','musk'];weights=[16,12,24,16,16,16];mood='زهري';name='ياسمين أبيض'}
+ else if(/جلد|جلدي/.test(lower)){ids=['bergamot','cardamom','saffron','leather','oud','amber'];weights=[14,12,10,20,22,22];mood='جلدي';name='جلد وعنبر'}
+ else if(/حلو|فانيلا/.test(lower)){ids=['bergamot','lavender','vanilla','amber','sandal','musk'];weights=[14,12,20,20,16,18];mood='حلو';name='دفء الفانيلا'}
+ else if(/نظيف|فندق|مسك|خشبي/.test(lower)){ids=['bergamot','neroli','lavender','cedar','sandal','musk'];weights=[18,12,14,18,18,20];mood='نظيف';name='ردهة فاخرة'}
+ db.draft.notes=ids.map((id,i)=>({id,pct:weights[i]}));
+ if(!db.draft.name)db.draft.name=name;
+ db.draft.mood=mood;
+ save();
+ toast('تم إنشاء تركيبة أولية وفتحها في المختبر');
+ if(openLab)setRoute('lab'); else render();
+}
+
 function askAIFromCreate(){const idea=document.getElementById('idea')?.value?.trim();db.draft.name=document.getElementById('fName')?.value||db.draft.name;db.draft.mood=document.getElementById('fMood')?.value||db.draft.mood;db.draft.occasion=document.getElementById('fOcc')?.value||db.draft.occasion;save();setRoute('assistant');if(idea)setTimeout(()=>{const p=document.getElementById('aiPrompt');if(p)p.value=idea;askPerfumeAI(idea)},30)}
 function openAIReview(){const d=`راجع هذه التركيبة الحالية وطورها مع الحفاظ على فكرتها: ${db.draft.name||'بدون اسم'}، الطابع ${db.draft.mood}، الاستخدام ${db.draft.occasion}. المواد الحالية: ${db.draft.notes.map(n=>{const m=MATERIALS.find(x=>x.id===n.id);return m.name+' '+n.pct+'%'}).join('، ')}. أعطني نسخة أكثر توازنًا وثباتًا من نفس مواد المكتبة.`;setRoute('assistant');setTimeout(()=>{const p=document.getElementById('aiPrompt');if(p)p.value=d},30)}
 function render(){view.innerHTML=({home,create,lab,materials,formulas,knowledge,favorites,profile,settings,supplies,assistant}[route]||home)();bindDraftInputs()}
