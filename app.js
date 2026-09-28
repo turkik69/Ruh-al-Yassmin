@@ -221,7 +221,7 @@ let cloneImageData='';
 function clonePerfume(){return `${pageHero('استنساخ عطر','صوّر الزجاجة أو اختر صورة، ثم حوّل نوتاتها إلى تركيبة مستوحاة قابلة للتعديل','📷','pink')}
 <section class="clone-capture lux-panel tone-cream">
  <div class="panel-heading"><div><span class="mini-label">التعرف البصري</span><h3>صوّر العطر</h3></div><span class="panel-icon">📷</span></div>
- <label class="camera-drop" for="perfumePhoto"><input id="perfumePhoto" type="file" accept="image/*" capture="environment" onchange="previewPerfumePhoto(this)"><span class="camera-icon">◎</span><b>التقط صورة أو اخترها من الهاتف</b><small>اجعل اسم العطر والعلامة التجارية واضحين قدر الإمكان</small></label>
+ <div class="camera-drop"><span class="camera-icon">◎</span><b>أضف صورة العطر</b><small>يمكنك التصوير بالكاميرا أو اختيار صورة موجودة من استديو الصور</small><div class="media-pickers"><label class="picker-btn camera-btn" for="perfumeCamera">📷 التقاط صورة</label><input id="perfumeCamera" type="file" accept="image/*" capture="environment" onchange="previewPerfumePhoto(this)"><label class="picker-btn gallery-btn" for="perfumeGallery">🖼 اختيار من الاستديو</label><input id="perfumeGallery" type="file" accept="image/*" onchange="previewPerfumePhoto(this)"></div></div>
  <div id="clonePreview" class="clone-preview"></div>
  <div class="field clone-name"><label>اسم العطر — اختياري إذا كانت الصورة واضحة</label><input id="cloneName" placeholder="مثال: Dior Sauvage Elixir"></div>
  <button class="ai-main-btn" id="cloneAnalyzeBtn" onclick="analyzePerfumePhoto()">✦ تعرّف على العطر وابحث عن مكوناته</button>
@@ -235,7 +235,7 @@ function previewPerfumePhoto(input){
  reader.onload=()=>{cloneImageData=String(reader.result||'');const p=document.getElementById('clonePreview');if(p)p.innerHTML=`<img src="${cloneImageData}" alt="صورة العطر"><button onclick="clearClonePhoto()">×</button>`};
  reader.readAsDataURL(file);
 }
-function clearClonePhoto(){cloneImageData='';const f=document.getElementById('perfumePhoto');if(f)f.value='';const p=document.getElementById('clonePreview');if(p)p.innerHTML=''}
+function clearClonePhoto(){cloneImageData='';const cam=document.getElementById('perfumeCamera');const gal=document.getElementById('perfumeGallery');if(cam)cam.value='';if(gal)gal.value='';const p=document.getElementById('clonePreview');if(p)p.innerHTML=''}
 function cloneEndpoint(){return window.RUH_YASMIN_PERFUME_API||apiUrl('/api/perfume-identify')}
 async function analyzePerfumePhoto(){
  const manualName=document.getElementById('cloneName')?.value?.trim()||'';
