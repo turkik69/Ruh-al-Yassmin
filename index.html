@@ -1,1 +1,36 @@
-
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no,maximum-scale=1" />
+  <meta name="theme-color" content="#1b2130" />
+  <title>روح الياسمين</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app" class="app-shell">
+    <header class="topbar">
+      <div class="brand-wrap">
+        <div class="brand-mark">ي</div>
+        <div>
+          <h1>روح الياسمين</h1>
+          <p>مختبرك الشخصي لصناعة العطور</p>
+        </div>
+      </div>
+      <button class="icon-btn" id="themeBtn" aria-label="تغيير المظهر">◐</button>
+    </header>
+    <main id="view" class="view"></main>
+    <nav class="bottom-nav" aria-label="التنقل الرئيسي">
+      <button data-route="home" class="nav-item active"><span>⌂</span><small>الرئيسية</small></button>
+      <button data-route="create" class="nav-item"><span>✦</span><small>اصنع عطرك</small></button>
+      <button data-route="lab" class="nav-item"><span>⚗</span><small>المختبر</small></button>
+      <button data-route="materials" class="nav-item"><span>◈</span><small>المواد</small></button>
+      <button data-route="formulas" class="nav-item"><span>☰</span><small>تركيباتي</small></button>
+    </nav>
+  </div>
+  <dialog id="modal" class="modal"><div id="modalContent"></div></dialog>
+  <script src="app.js"></script>
+</body>
+</html>
