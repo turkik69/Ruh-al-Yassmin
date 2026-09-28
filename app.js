@@ -30,6 +30,7 @@ const SUPPLY_DEFAULTS=[
  {id:'vanilla-oil',category:'زيوت ومواد عطرية',name:'فانيلا',qty:20,unit:'ml',note:'لتليين التركيبات وإضافة دفء'},
  {id:'musk-oil',category:'زيوت ومواد عطرية',name:'مسك',qty:30,unit:'ml',note:'مفيد للثبات والطابع النظيف'},
  {id:'neroli-oil',category:'زيوت ومواد عطرية',name:'نيرولي',qty:10,unit:'ml',note:'افتتاحية زهرية حمضية'},
+ {id:'leather-oil',category:'زيوت ومواد عطرية',name:'جلد',qty:10,unit:'ml',note:'لمسات جلدية قوية؛ ابدأ بكمية صغيرة'},
  {id:'ethanol',category:'الكحول والقاعدة',name:'كحول عطري / إيثانول مناسب للعطور',qty:1,unit:'L',note:'اختر درجة مناسبة لصناعة العطور من مورد موثوق'},
  {id:'storage-30',category:'زجاجات الحفظ',name:'زجاجات زجاجية داكنة 30 ml',qty:20,unit:'حبة',note:'لحفظ التركيبات والتجارب'},
  {id:'storage-100',category:'زجاجات الحفظ',name:'زجاجات زجاجية داكنة 100 ml',qty:10,unit:'حبة',note:'للدفعات الأكبر'},
@@ -41,7 +42,16 @@ const SUPPLY_DEFAULTS=[
 const DBKEY='ruhYasminDB_v1';
 const defaultDB={formulas:[],draft:{name:'',mood:'فاخر',occasion:'مسائي',gender:'يونيسكس',notes:[]},theme:'dark'};
 let db=JSON.parse(localStorage.getItem(DBKEY)||'null')||structuredClone(defaultDB);
-if(!Array.isArray(db.supplies))db.supplies=SUPPLY_DEFAULTS.map(x=>({...x,bought:false}));
+if(!Array.isArray(db.supplies))db.supplies=[];
+for(const def of SUPPLY_DEFAULTS){
+ const old=db.supplies.find(x=>x.id===def.id);
+ if(!old)db.supplies.push({...def,bought:false,remaining:0,capacity:def.qty});
+ else{
+  if(old.capacity==null)old.capacity=Number(old.qty)||def.qty;
+  if(old.remaining==null)old.remaining=old.bought?(Number(old.qty)||0):0;
+ }
+}
+if(!Array.isArray(db.usageHistory))db.usageHistory=[];
 let route='home';
 const view=document.getElementById('view');
 const modal=document.getElementById('modal');
@@ -106,18 +116,40 @@ function settings(){return `${pageHero('الإعدادات','إدارة تجرب
  <section class="lux-panel tone-lilac"><div class="panel-heading"><div><span class="mini-label">التطبيق</span><h3>روح الياسمين</h3></div><span class="panel-icon">⚙</span></div><p>يتم حفظ تركيباتك وقائمة مشتريات المختبر محليًا على هذا الجهاز حاليًا.</p><div class="actions"><button class="ghost" onclick="db.theme=db.theme==='light'?'dark':'light';applyTheme();save();render()">تبديل المظهر</button></div></section>
 </section>`}
 
+function isConsumableSupply(item){return item.category==='زيوت ومواد عطرية'||item.id==='ethanol'}
+function stockPercent(item){if(!item.bought)return 0;const cap=Number(item.capacity||item.qty||0);if(!cap)return 0;return Math.max(0,Math.min(100,Math.round((Number(item.remaining||0)/cap)*100)))}
+function supplyBottle(item){
+ if(!isConsumableSupply(item))return '';
+ const p=stockPercent(item);
+ const low=p<=20&&item.bought?' low':'';
+ return `<div class="stock-bottle${low}" title="المتبقي ${formatSupplyAmount(item)}"><div class="bottle-neck"></div><div class="bottle-body"><div class="bottle-liquid" style="height:${p}%"></div><span>${p}%</span></div></div>`
+}
+function formatSupplyAmount(item){const r=Math.max(0,Number(item.remaining||0));return (item.unit==='L'?r.toFixed(3):r.toFixed(2))+' '+item.unit}
 function supplies(){
  const categories=[...new Set(db.supplies.map(x=>x.category))];
  const bought=db.supplies.filter(x=>x.bought).length;
- return `${pageHero('تجهيز مختبري','قائمة شراء شخصية تساعدك على تجهيز مختبر روح الياسمين','🧴','gold')}
+ return `${pageHero('تجهيز مختبري','مخزونك الشخصي مع متابعة الكمية المتبقية بعد كل عملية خلط','🧴','gold')}
  <section class="supply-summary"><div><span>تم الشراء</span><b>${bought}/${db.supplies.length}</b></div><div class="progress"><span style="width:${Math.round(bought/db.supplies.length*100)}%"></span></div></section>
- <div class="supply-note">الكميات أدناه نقطة بداية عملية لمختبر شخصي صغير، ويمكنك تعديل أي كمية حسب أسلوبك وعدد تجاربك.</div>
- ${categories.map(cat=>`<section class="supply-group"><div class="section-title"><h3>${cat}</h3><span>${db.supplies.filter(x=>x.category===cat).length} عناصر</span></div><div class="supply-list">${db.supplies.filter(x=>x.category===cat).map(item=>`<div class="supply-item ${item.bought?'done':''}"><button class="supply-check" onclick="toggleSupply('${item.id}')">${item.bought?'✓':''}</button><div class="supply-copy"><b>${item.name}</b><small>${item.note}</small></div><div class="supply-qty"><input type="number" min="0" step="1" value="${item.qty}" onchange="updateSupplyQty('${item.id}',this.value)"><span>${item.unit}</span></div></div>`).join('')}</div></section>`).join('')}
+ <div class="supply-note">عند تحديد الزيت أو الكحول بأنه تم شراؤه، تظهر الزجاجة ممتلئة حسب الكمية المسجلة. عند تنفيذ دفعة عطر من المختبر، يخصم التطبيق الاستهلاك تلقائيًا من المخزون.</div>
+ ${categories.map(cat=>`<section class="supply-group"><div class="section-title"><h3>${cat}</h3><span>${db.supplies.filter(x=>x.category===cat).length} عناصر</span></div><div class="supply-list">${db.supplies.filter(x=>x.category===cat).map(item=>`<div class="supply-item ${item.bought?'done':''} ${isConsumableSupply(item)?'tracked':''}"><button class="supply-check" onclick="toggleSupply('${item.id}')">${item.bought?'✓':''}</button>${supplyBottle(item)}<div class="supply-copy"><b>${item.name}</b><small>${item.note}</small>${isConsumableSupply(item)&&item.bought?`<em class="remaining-text">المتبقي: ${formatSupplyAmount(item)} من ${item.capacity} ${item.unit}</em>`:''}</div><div class="supply-qty"><input type="number" min="0" step="${item.unit==='L'?'0.1':'1'}" value="${item.qty}" onchange="updateSupplyQty('${item.id}',this.value)"><span>${item.unit}</span></div></div>`).join('')}</div></section>`).join('')}
+ ${db.usageHistory.length?`<section class="usage-history"><div class="section-title"><h3>آخر عمليات الخصم</h3><span>${db.usageHistory.length}</span></div>${db.usageHistory.slice(0,5).map(h=>`<div class="history-row"><div><b>${esc(h.name)}</b><small>${new Date(h.date).toLocaleString('ar-OM')}</small></div><span>${h.size} ml</span></div>`).join('')}</section>`:''}
  <div class="actions supply-actions"><button class="ghost" onclick="resetSupplies()">إعادة الكميات المقترحة</button><button class="primary" onclick="markAllSupplies(false)">إلغاء علامات الشراء</button></div>`}
-function toggleSupply(id){const x=db.supplies.find(i=>i.id===id);if(!x)return;x.bought=!x.bought;save();render()}
-function updateSupplyQty(id,value){const x=db.supplies.find(i=>i.id===id);if(!x)return;x.qty=Math.max(0,Number(value)||0);save()}
-function resetSupplies(){db.supplies=SUPPLY_DEFAULTS.map(x=>({...x,bought:false}));save();render();toast('تمت إعادة قائمة التجهيز المقترحة')}
-function markAllSupplies(value){db.supplies.forEach(x=>x.bought=value);save();render()}
+function toggleSupply(id){
+ const x=db.supplies.find(i=>i.id===id);if(!x)return;
+ x.bought=!x.bought;
+ if(x.bought){x.capacity=Number(x.qty)||0;x.remaining=Number(x.qty)||0}
+ else{x.remaining=0}
+ save();render()
+}
+function updateSupplyQty(id,value){
+ const x=db.supplies.find(i=>i.id===id);if(!x)return;
+ const oldCap=Number(x.capacity||x.qty||0),oldRemaining=Number(x.remaining||0),next=Math.max(0,Number(value)||0);
+ x.qty=next;x.capacity=next;
+ if(x.bought){x.remaining=(Math.abs(oldRemaining-oldCap)<0.0001)?next:Math.min(oldRemaining,next)}
+ save();render()
+}
+function resetSupplies(){db.supplies=SUPPLY_DEFAULTS.map(x=>({...x,bought:false,remaining:0,capacity:x.qty}));db.usageHistory=[];save();render();toast('تمت إعادة قائمة التجهيز والمخزون')}
+function markAllSupplies(value){db.supplies.forEach(x=>{x.bought=value;x.capacity=Number(x.qty)||0;x.remaining=value?(Number(x.qty)||0):0});save();render()}
 
 function assistant(){return `${pageHero('مساعد روح الياسمين','صف عطرك بكلماتك ودع الذكاء الاصطناعي يبني لك نقطة بداية قابلة للتعديل','✦','teal')}
 <section class="ai-stage"><div class="ai-orb">✦</div><div><span class="mini-label">Ruh Al Yassmin AI</span><h3>ماذا تريد أن تصنع اليوم؟</h3><p>اكتب الإحساس، المناسبة، المواد التي تحبها أو ترفضها، والثبات أو الفوحان الذي تتوقعه.</p></div></section>
@@ -164,7 +196,42 @@ function generateFromIdea(){const text=(document.getElementById('idea')?.value||
  if(/حلو|فانيلا/.test(text))ids=['bergamot','lavender','vanilla','amber','sandal','musk'];
  const weights=ids.length===6?[16,14,12,20,20,18]:[18,15,22,25,20];db.draft.notes=ids.map((id,i)=>({id,pct:weights[i]}));save();setRoute('lab');toast('تم إنشاء تركيبة أولية قابلة للتعديل')}
 function smartIdea(){const ideas=[['نسيم اللبان','منعش','يومي',['bergamot','neroli','cedar','sandal','musk'],[22,14,18,22,24]],['ليل الصحراء','غامض','مسائي',['cardamom','saffron','oud','amber','musk'],[14,10,24,28,24]],['ياسمين أبيض','زهري','مناسبات',['bergamot','jasmine','rose','sandal','musk'],[18,25,18,19,20]]];const x=ideas[Math.floor(Math.random()*ideas.length)];db.draft={name:x[0],mood:x[1],occasion:x[2],gender:'يونيسكس',notes:x[3].map((id,i)=>({id,pct:x[4][i]}))};save();setRoute('lab')}
-function calcBatch(){const size=Number(document.getElementById('batchSize').value||50),conc=Number(document.getElementById('conc').value||25),oil=size*conc/100,carrier=size-oil;let html=`<div class="card" style="margin-top:10px"><p>الزيت العطري: <b>${oil.toFixed(2)} ml</b> • الكحول/القاعدة: <b>${carrier.toFixed(2)} ml</b></p>`;html+=db.draft.notes.map(n=>{const m=MATERIALS.find(x=>x.id===n.id);return `<p>${m.name}: <b>${(oil*(n.pct/100)).toFixed(2)} ml</b></p>`}).join('')+'</div>';document.getElementById('batchResult').innerHTML=html}
+let pendingBatch=null;
+function materialSupplyId(materialId){return materialId+'-oil'}
+function calcBatch(){
+ const size=Number(document.getElementById('batchSize').value||50),conc=Number(document.getElementById('conc').value||25),oil=size*conc/100,carrier=size-oil;
+ const items=db.draft.notes.map(n=>{const m=MATERIALS.find(x=>x.id===n.id);return {id:n.id,name:m.name,ml:oil*(n.pct/100)}});
+ pendingBatch={size,conc,oil,carrier,items,name:db.draft.name||'دفعة عطر'};
+ let html=`<div class="card batch-calculation" style="margin-top:10px"><p>الزيت العطري: <b>${oil.toFixed(2)} ml</b> • الكحول/القاعدة: <b>${carrier.toFixed(2)} ml</b></p>`;
+ html+=items.map(i=>{const stock=db.supplies.find(x=>x.id===materialSupplyId(i.id));const remain=stock?.bought?formatSupplyAmount(stock):'غير مسجل';return `<p>${i.name}: <b>${i.ml.toFixed(2)} ml</b> <small>• المخزون: ${remain}</small></p>`}).join('');
+ const alcohol=db.supplies.find(x=>x.id==='ethanol');html+=`<p>الكحول: <b>${carrier.toFixed(2)} ml</b> <small>• المخزون: ${alcohol?.bought?formatSupplyAmount(alcohol):'غير مسجل'}</small></p>`;
+ html+=`<button class="inventory-use-btn" onclick="commitBatchUsage()">✓ تسجيل تنفيذ الدفعة وخصم المخزون</button><small class="inventory-hint">لن يتم خصم أي كمية إلا بعد الضغط على هذا الزر.</small></div>`;
+ document.getElementById('batchResult').innerHTML=html
+}
+function getBatchShortages(batch){
+ const issues=[];
+ for(const item of batch.items){
+  const s=db.supplies.find(x=>x.id===materialSupplyId(item.id));
+  if(!s?.bought)issues.push(item.name+' غير مسجل كمشترى');
+  else if(Number(s.remaining||0)+1e-9<item.ml)issues.push(item.name+' المتبقي '+formatSupplyAmount(s)+' والمطلوب '+item.ml.toFixed(2)+' ml');
+ }
+ const alcohol=db.supplies.find(x=>x.id==='ethanol');
+ const alcoholNeedL=batch.carrier/1000;
+ if(!alcohol?.bought)issues.push('الكحول غير مسجل كمشترى');
+ else if(Number(alcohol.remaining||0)+1e-9<alcoholNeedL)issues.push('الكحول المتبقي '+formatSupplyAmount(alcohol)+' والمطلوب '+batch.carrier.toFixed(2)+' ml');
+ return issues
+}
+function commitBatchUsage(){
+ if(!pendingBatch)return toast('احسب الدفعة أولاً');
+ const issues=getBatchShortages(pendingBatch);
+ if(issues.length){modalContent.innerHTML=`<h3>المخزون غير كافٍ</h3><p>لا يمكن تسجيل تنفيذ الدفعة قبل معالجة التالي:</p><div class="shortage-list">${issues.map(x=>`<div>• ${esc(x)}</div>`).join('')}</div><button class="ghost wide-btn" onclick="modal.close();setRoute('supplies')">فتح تجهيز مختبري</button><button class="primary wide-btn" onclick="modal.close()">إغلاق</button>`;modal.showModal();return}
+ for(const item of pendingBatch.items){const st=db.supplies.find(x=>x.id===materialSupplyId(item.id));st.remaining=Math.max(0,Number(st.remaining)-item.ml)}
+ const alcohol=db.supplies.find(x=>x.id==='ethanol');alcohol.remaining=Math.max(0,Number(alcohol.remaining)-(pendingBatch.carrier/1000));
+ db.usageHistory.unshift({id:crypto.randomUUID(),date:new Date().toISOString(),name:pendingBatch.name,size:pendingBatch.size,conc:pendingBatch.conc,items:pendingBatch.items.map(x=>({...x})),alcoholMl:pendingBatch.carrier});
+ db.usageHistory=db.usageHistory.slice(0,50);save();toast('تم خصم مكونات الدفعة من المخزون');
+ document.getElementById('batchResult').innerHTML='<div class="inventory-success">✓ تم تسجيل تنفيذ الدفعة وتحديث كميات الزجاجات.</div>';pendingBatch=null
+}
+
 function saveFormula(){if(!db.draft.notes.length)return toast('لا توجد مواد لحفظها');if(Math.abs(totalPct()-100)>0.2)return toast('وازن النسب إلى 100% أولاً');const same=db.formulas.filter(f=>f.baseName===(db.draft.name||'تركيبة خاصة'));const v=`V${same.length+1}`;db.formulas.unshift({id:crypto.randomUUID(),baseName:db.draft.name||'تركيبة خاصة',name:db.draft.name||'تركيبة خاصة',mood:db.draft.mood,occasion:db.draft.occasion,gender:db.draft.gender,notes:structuredClone(db.draft.notes),version:v,versionNotes:document.getElementById('versionNotes')?.value||'',createdAt:new Date().toISOString(),ratings:{projection:0,longevity:0,opening:0,drydown:0}});save();setRoute('formulas');toast(`تم حفظ ${v}`)}
 function openFormula(id){const f=db.formulas.find(x=>x.id===id);if(!f)return;modalContent.innerHTML=`<h3>${esc(f.name)} — ${f.version}</h3><p style="color:var(--muted)">${esc(f.mood)} • ${esc(f.occasion)} • ${esc(f.gender)}</p>${f.notes.map(n=>{const m=MATERIALS.find(x=>x.id===n.id);return `<div class="note-row"><div><strong>${m.name}</strong><small style="display:block;color:var(--muted)">${m.level}</small></div><b>${n.pct}%</b><span></span></div>`}).join('')}<hr style="border:0;border-top:1px solid var(--line)"><p>${esc(f.versionNotes)||'لا توجد ملاحظات.'}</p><div class="actions"><button class="secondary" onclick="loadFormula('${f.id}')">استخدم كأساس لنسخة جديدة</button><button class="danger" onclick="deleteFormula('${f.id}')">حذف</button><button class="ghost" onclick="modal.close()">إغلاق</button></div>`;modal.showModal()}
 function loadFormula(id){const f=db.formulas.find(x=>x.id===id);db.draft={name:f.name,mood:f.mood,occasion:f.occasion,gender:f.gender,notes:structuredClone(f.notes)};save();modal.close();setRoute('lab')}
