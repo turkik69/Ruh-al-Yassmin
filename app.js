@@ -52,7 +52,8 @@ for(const def of SUPPLY_DEFAULTS){
  }
 }
 if(!Array.isArray(db.usageHistory))db.usageHistory=[];
-if(!db.backend)db.backend={enabled:true,url:'',lastStatus:'unknown'};
+if(!db.backend)db.backend={enabled:true,url:'https://ruh-al-yassmin.vercel.app',lastStatus:'unknown'};
+if(!db.backend.url)db.backend.url='https://ruh-al-yassmin.vercel.app';
 let route='home';
 const view=document.getElementById('view');
 const modal=document.getElementById('modal');
