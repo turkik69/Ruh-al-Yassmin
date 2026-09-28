@@ -52,6 +52,7 @@ for(const def of SUPPLY_DEFAULTS){
  }
 }
 if(!Array.isArray(db.usageHistory))db.usageHistory=[];
+if(!db.backend)db.backend={enabled:true,url:'',lastStatus:'unknown'};
 let route='home';
 const view=document.getElementById('view');
 const modal=document.getElementById('modal');
@@ -115,6 +116,16 @@ function lab(){const d=db.draft;return `${pageHero('المختبر','اخلط ا
  </div>
  <div class="section-title"><h3>الهرم العطري</h3><span>نسب التركيز داخل الزيت العطري</span></div>${draftNotesHTML()}
  <div class="actions premium-actions"><button class="primary" onclick="addMaterialModal()">+ إضافة مادة</button><button class="secondary" onclick="normalizeDraft()">موازنة إلى 100%</button><button class="ai-action" onclick="openAIReview()">✦ راجع التركيبة بالذكاء الاصطناعي</button></div>
+ <section class="lux-panel tone-teal performance-panel">
+   <div class="panel-heading"><div><span class="mini-label">محسن الأداء العطري</span><h3>الفوحان • التركيز • الثبات</h3></div><span class="panel-icon">✦</span></div>
+   <div class="performance-grid">
+     <div class="field"><label>التركيز المستهدف</label><select id="perfConc"><option value="20">EDP — 20%</option><option value="25" selected>EDP+ — 25%</option><option value="30">Parfum — 30%</option><option value="35">Extrait — 35%</option></select></div>
+     <div class="field"><label>الفوحان المطلوب</label><select id="perfProjection"><option value="soft">ناعم وقريب</option><option value="medium" selected>متوازن</option><option value="strong">قوي</option><option value="very-strong">قوي جدًا</option></select></div>
+     <div class="field"><label>الثبات المستهدف</label><select id="perfLongevity"><option value="4">حوالي 4 ساعات</option><option value="6">حوالي 6 ساعات</option><option value="8" selected>حوالي 8 ساعات</option><option value="10">حوالي 10 ساعات</option><option value="12">12+ ساعة</option></select></div>
+   </div>
+   <button class="perf-analyze-btn" onclick="analyzePerformance()">حلّل التركيبة واقترح التعديلات</button>
+   <div id="performanceResult"></div>
+ </section>
  <section class="lux-panel tone-gold batch-panel"><div class="panel-heading"><div><span class="mini-label">دفعات الخلط</span><h3>حساب كمية الإنتاج</h3></div><span class="panel-icon">🧪</span></div>
  <div class="grid"><div class="field"><label>حجم العبوة ml</label><input id="batchSize" type="number" value="50" min="1"></div><div class="field"><label>تركيز الزيت العطري</label><select id="conc"><option value="20">EDP 20%</option><option value="25" selected>EDP+ 25%</option><option value="30">Parfum 30%</option><option value="35">Extrait 35%</option></select></div></div><button class="ghost wide-btn" onclick="calcBatch()">احسب الكميات</button><div id="batchResult"></div></section>
  <section class="lux-panel tone-rose"><div class="panel-heading"><div><span class="mini-label">إدارة الإصدارات</span><h3>احفظ تركيبتك</h3></div><span class="panel-icon">📖</span></div><div class="field"><label>ملاحظات النسخة</label><textarea id="versionNotes" placeholder="مثال: قللت الفانيلا وزدت الصندل..."></textarea></div><button class="primary wide-btn" onclick="saveFormula()">حفظ نسخة جديدة V</button></section>`}
@@ -128,10 +139,48 @@ function formulas(){return `${pageHero('تركيباتي','دفتر تركيبا
 function knowledge(){return `${pageHero('المعرفة','مرجعك السريع لفهم الهرم العطري والعائلات والتوافقات','▤','teal')}<div class="knowledge-grid"><button class="lux-panel tone-lilac knowledge-card" onclick="setRoute('materials')"><b>مكتبة المواد</b><small>خصائص المواد وقوتها وثباتها وتوافقاتها</small></button><section class="lux-panel tone-gold knowledge-card"><b>الهرم العطري</b><small>افتتاحية • قلب • قاعدة — ابنِ توازنًا واضحًا لكل تركيبة</small></section><section class="lux-panel tone-pink knowledge-card"><b>التجربة والتعتيق</b><small>سجل ملاحظات كل نسخة قبل الانتقال إلى الإصدار التالي</small></section></div>`}
 function favorites(){const list=db.formulas.slice(0,6);return `${pageHero('المفضلة','مكان سريع للرجوع إلى التركيبات التي تعمل عليها','♡','pink')}${list.length?`<div class="formula-cards material-list">${list.map((f,i)=>`<div class="formula-card formula-tone-${i%4}"><div class="formula-v">${esc(f.version)}</div><div class="formula-copy"><strong>${esc(f.name)}</strong><small>${esc(f.mood)} • ${f.notes.length} مواد</small></div><button class="formula-open" onclick="openFormula('${f.id}')">فتح</button></div>`).join('')}</div>`:'<div class="empty lux-panel tone-pink">عندما تحفظ تركيباتك ستظهر هنا للرجوع السريع.</div>'}`}
 function profile(){return `${pageHero('حسابي','مساحة روح الياسمين الشخصية على هذا الجهاز','♙','gold')}<section class="lux-panel tone-cream profile-card"><div class="profile-logo"><img src="icon.svg" alt=""></div><div><span class="mini-label">مختبر شخصي</span><h3>روح الياسمين</h3><p>تركيبات محفوظة: <b>${db.formulas.length}</b> • مواد المكتبة: <b>${MATERIALS.length}</b></p></div></section>`}
-function settings(){return `${pageHero('الإعدادات','إدارة تجربة التطبيق والبيانات المحلية','⚙','lilac')}
+function settings(){return `${pageHero('الإعدادات','إدارة تجربة التطبيق والاتصال بالخادم','⚙','lilac')}
 <section class="settings-menu">
- <section class="lux-panel tone-lilac"><div class="panel-heading"><div><span class="mini-label">التطبيق</span><h3>روح الياسمين</h3></div><span class="panel-icon">⚙</span></div><p>يتم حفظ تركيباتك وقائمة مشتريات المختبر محليًا على هذا الجهاز حاليًا.</p><div class="actions"><button class="ghost" onclick="db.theme=db.theme==='light'?'dark':'light';applyTheme();save();render()">تبديل المظهر</button></div></section>
+ <button class="setting-card backend-setting" onclick="setRoute('backend')"><span class="setting-icon">☁</span><div><b>Backend</b><small>تشغيل وفحص خادم الذكاء الاصطناعي والتعرف على العطور</small></div><span class="setting-arrow">←</span></button>
+ <section class="lux-panel tone-lilac"><div class="panel-heading"><div><span class="mini-label">التطبيق</span><h3>روح الياسمين</h3></div><span class="panel-icon">⚙</span></div><p>يتم حفظ تركيباتك وقائمة مشتريات المختبر محليًا على هذا الجهاز.</p><div class="actions"><button class="ghost" onclick="db.theme=db.theme==='light'?'dark':'light';applyTheme();save();render()">تبديل المظهر</button></div></section>
 </section>`}
+
+function backendPage(){
+ const status=db.backend.lastStatus||'unknown';
+ return `${pageHero('Backend','إدارة الاتصال بالخادم السحابي لميزات الذكاء الاصطناعي','☁','teal')}
+ <section class="backend-card lux-panel tone-cream">
+   <div class="backend-status-row"><div><span class="mini-label">حالة الخادم</span><h3>${status==='online'?'متصل':status==='offline'?'غير متصل':'لم يتم الفحص'}</h3></div><span class="backend-dot ${status}"></span></div>
+   <label class="backend-toggle"><input type="checkbox" ${db.backend.enabled?'checked':''} onchange="toggleBackend(this.checked)"><span>تفعيل Backend</span></label>
+   <div class="field"><label>عنوان الخادم</label><input id="backendUrl" value="${esc(db.backend.url||'')}" placeholder="مثال: https://ruh-al-yassmin.vercel.app"></div>
+   <small class="backend-help">اترك الحقل فارغًا إذا كان التطبيق نفسه منشورًا على Vercel. عند استخدام GitHub Pages ضع رابط مشروع Vercel هنا.</small>
+   <div class="actions"><button class="primary" onclick="saveBackendUrl()">حفظ العنوان</button><button class="ghost" onclick="testBackend()">اختبار الاتصال</button></div>
+   <div id="backendTestResult"></div>
+ </section>
+ <section class="lux-panel tone-lilac"><b>ما الذي يستخدم Backend؟</b><p>التعرف على العطر من الصورة، البحث عن نوتاته على الإنترنت، والمساعد الذكي السحابي. إذا تعذر الاتصال يبقى المساعد المحلي متاحًا.</p></section>`
+}
+function backendBase(){
+ if(!db.backend?.enabled)return '';
+ const raw=String(db.backend.url||'').trim().replace(/\/$/,'');
+ return raw;
+}
+function apiUrl(path){
+ const base=backendBase();
+ return base?base+path:path;
+}
+function toggleBackend(v){db.backend.enabled=!!v;save();renderKeepScroll()}
+function saveBackendUrl(){const el=document.getElementById('backendUrl');db.backend.url=(el?.value||'').trim().replace(/\/$/,'');save();toast('تم حفظ عنوان Backend');testBackend()}
+async function testBackend(){
+ const box=document.getElementById('backendTestResult');if(box)box.innerHTML='<div class="ai-thinking">جاري فحص الخادم...</div>';
+ try{
+  const r=await fetch(apiUrl('/api/health'),{cache:'no-store'});
+  if(!r.ok)throw new Error('offline');
+  const data=await r.json();db.backend.lastStatus='online';save();
+  if(box)box.innerHTML=`<div class="backend-ok">✓ الخادم يعمل ${data?.version?'• '+esc(data.version):''}</div>`;
+ }catch(e){
+  db.backend.lastStatus='offline';save();
+  if(box)box.innerHTML='<div class="backend-bad">تعذر الوصول إلى Backend. تأكد من رابط Vercel ونشر المشروع.</div>';
+ }
+}
 
 function isConsumableSupply(item){return item.category==='زيوت ومواد عطرية'||item.id==='ethanol'}
 function stockPercent(item){if(!item.bought)return 0;const cap=Number(item.capacity||item.qty||0);if(!cap)return 0;return Math.max(0,Math.min(100,Math.round((Number(item.remaining||0)/cap)*100)))}
@@ -187,7 +236,7 @@ function previewPerfumePhoto(input){
  reader.readAsDataURL(file);
 }
 function clearClonePhoto(){cloneImageData='';const f=document.getElementById('perfumePhoto');if(f)f.value='';const p=document.getElementById('clonePreview');if(p)p.innerHTML=''}
-function cloneEndpoint(){return window.RUH_YASMIN_PERFUME_API||'./api/perfume-identify'}
+function cloneEndpoint(){return window.RUH_YASMIN_PERFUME_API||apiUrl('/api/perfume-identify')}
 async function analyzePerfumePhoto(){
  const manualName=document.getElementById('cloneName')?.value?.trim()||'';
  if(!cloneImageData&&!manualName)return toast('صوّر العطر أو اكتب اسمه أولاً');
@@ -316,7 +365,7 @@ function generateLocalAI(text,openLab=false){
 
 function askAIFromCreate(){const idea=document.getElementById('idea')?.value?.trim();db.draft.name=document.getElementById('fName')?.value||db.draft.name;db.draft.mood=document.getElementById('fMood')?.value||db.draft.mood;db.draft.occasion=document.getElementById('fOcc')?.value||db.draft.occasion;save();setRoute('assistant');if(idea)setTimeout(()=>{const p=document.getElementById('aiPrompt');if(p)p.value=idea;askPerfumeAI(idea)},30)}
 function openAIReview(){const d=`راجع هذه التركيبة الحالية وطورها مع الحفاظ على فكرتها: ${db.draft.name||'بدون اسم'}، الطابع ${db.draft.mood}، الاستخدام ${db.draft.occasion}. المواد الحالية: ${db.draft.notes.map(n=>{const m=MATERIALS.find(x=>x.id===n.id);return m.name+' '+n.pct+'%'}).join('، ')}. أعطني نسخة أكثر توازنًا وثباتًا من نفس مواد المكتبة.`;setRoute('assistant');setTimeout(()=>{const p=document.getElementById('aiPrompt');if(p)p.value=d},30)}
-function render(){view.innerHTML=({home,create,lab,materials,formulas,knowledge,favorites,profile,settings,supplies,clone:clonePerfume,assistant}[route]||home)();bindDraftInputs()}
+function render(){view.innerHTML=({home,create,lab,materials,formulas,knowledge,favorites,profile,settings,backend:backendPage,supplies,clone:clonePerfume,assistant}[route]||home)();bindDraftInputs()}
 function bindDraftInputs(){['fName','fMood','fOcc'].forEach(id=>{const e=document.getElementById(id);if(!e)return;e.onchange=()=>{if(id==='fName')db.draft.name=e.value;if(id==='fMood')db.draft.mood=e.value;if(id==='fOcc')db.draft.occasion=e.value;save()}})}
 function totalPct(){return Math.round(db.draft.notes.reduce((a,n)=>a+Number(n.pct||0),0)*10)/10}
 function updatePct(i,v){db.draft.notes[i].pct=Math.max(0,Number(v)||0);save();render()}
@@ -333,6 +382,69 @@ function generateFromIdea(){const text=(document.getElementById('idea')?.value||
  if(/حلو|فانيلا/.test(text))ids=['bergamot','lavender','vanilla','amber','sandal','musk'];
  const weights=ids.length===6?[16,14,12,20,20,18]:[18,15,22,25,20];db.draft.notes=ids.map((id,i)=>({id,pct:weights[i]}));save();setRoute('lab');toast('تم إنشاء تركيبة أولية قابلة للتعديل')}
 function smartIdea(){const ideas=[['نسيم اللبان','منعش','يومي',['bergamot','neroli','cedar','sandal','musk'],[22,14,18,22,24]],['ليل الصحراء','غامض','مسائي',['cardamom','saffron','oud','amber','musk'],[14,10,24,28,24]],['ياسمين أبيض','زهري','مناسبات',['bergamot','jasmine','rose','sandal','musk'],[18,25,18,19,20]]];const x=ideas[Math.floor(Math.random()*ideas.length)];db.draft={name:x[0],mood:x[1],occasion:x[2],gender:'يونيسكس',notes:x[3].map((id,i)=>({id,pct:x[4][i]}))};save();setRoute('lab')}
+let pendingPerformancePlan=null;
+function currentLevelPct(level){
+ return db.draft.notes.reduce((sum,n)=>{const m=MATERIALS.find(x=>x.id===n.id);return sum+(m?.level===level?Number(n.pct||0):0)},0)
+}
+function analyzePerformance(){
+ if(!db.draft.notes.length)return toast('أضف مواد للتركيبة أولاً');
+ const projection=document.getElementById('perfProjection')?.value||'medium';
+ const longevity=Number(document.getElementById('perfLongevity')?.value||8);
+ const concentration=Number(document.getElementById('perfConc')?.value||25);
+ const top=currentLevelPct('افتتاحية'),heart=currentLevelPct('قلب'),base=currentLevelPct('قاعدة');
+ const changes=[];const add=[];
+ const has=id=>db.draft.notes.some(n=>n.id===id);
+ const bump=(id,delta,reason)=>changes.push({id,delta,reason});
+ if(projection==='strong'||projection==='very-strong'){
+   if(has('bergamot'))bump('bergamot',projection==='very-strong'?3:2,'رفع الانطباع الأول والفوحان');
+   else add.push({id:'bergamot',pct:projection==='very-strong'?5:3,reason:'افتتاحية واضحة تساعد على الانتشار'});
+   if(has('cardamom'))bump('cardamom',2,'دعم الانتشار من القلب');
+   else if(heart<25)add.push({id:'cardamom',pct:3,reason:'جسر عطري يعطي حضورًا أكبر'});
+   if(top>35)changes.push({id:'__top_reduce',delta:-3,reason:'تقليل الافتتاحيات المتطايرة جدًا حتى لا يهبط الأداء سريعًا'});
+ }
+ if(longevity>=8){
+   const strength=longevity>=12?5:longevity>=10?4:2;
+   const fixes=['musk','sandal','amber'];
+   for(const id of fixes.slice(0,longevity>=10?3:2)){
+     if(has(id))bump(id,strength,id==='musk'?'دعم الأثر والثبات':id==='sandal'?'تثبيت القاعدة وتنعيمها':'زيادة عمق القاعدة');
+     else add.push({id,pct:strength,reason:'مادة قاعدة مناسبة لرفع الثبات'});
+   }
+   if(base<35)add.push({id:has('cedar')?'cedar':'cedar',pct:longevity>=10?4:2,reason:'رفع نسبة القاعدة لتقليل الهبوط السريع'});
+ }
+ if(projection==='soft'){
+   if(has('bergamot'))bump('bergamot',-2,'تقليل حدة الافتتاحية');
+   if(has('musk'))bump('musk',2,'الحفاظ على هالة قريبة وناعمة');
+ }
+ const concAdvice=concentration>=35?'تركيز مرتفع جدًا؛ لا يعني بالضرورة فوحانًا أعلى، وقد يجعل الافتتاحية أثقل. ابدأ باختبار صغير.':concentration>=30?'تركيز قوي مناسب للثبات، ووازن القاعدة حتى لا تصبح التركيبة ثقيلة.':concentration>=25?'تركيز قوي ومتوازن لمعظم التركيبات.':'تركيز أخف؛ اعتمد أكثر على بنية القاعدة إذا أردت ثباتًا أطول.';
+ pendingPerformancePlan={projection,longevity,concentration,changes,add};
+ const box=document.getElementById('performanceResult');
+ const rows=[
+   ...changes.filter(x=>x.id!=='__top_reduce').map(x=>{const m=MATERIALS.find(y=>y.id===x.id);return `<div class="perf-suggestion"><span class="${x.delta>0?'up':'down'}">${x.delta>0?'↑':'↓'} ${Math.abs(x.delta)}%</span><div><b>${m?.name||x.id}</b><small>${x.reason}</small></div></div>`}),
+   ...add.map(x=>{const m=MATERIALS.find(y=>y.id===x.id);return `<div class="perf-suggestion add"><span>+</span><div><b>أضف ${m?.name||x.id} ~ ${x.pct}%</b><small>${x.reason}</small></div></div>`})
+ ];
+ if(box)box.innerHTML=`<div class="performance-answer"><div class="perf-metrics"><span>افتتاحية <b>${top.toFixed(0)}%</b></span><span>قلب <b>${heart.toFixed(0)}%</b></span><span>قاعدة <b>${base.toFixed(0)}%</b></span></div><p>${concAdvice}</p>${rows.length?rows.join(''):'<div class="inventory-success">تركيبتك متوازنة مع الهدف الحالي، ولا تحتاج تعديلًا كبيرًا.</div>'}<button class="primary wide-btn" onclick="applyPerformancePlan()">طبّق التعديلات المقترحة</button><small class="safety-note">المدة والفوحان تقديريان ويتأثران بالمادة الخام والبشرة والطقس. راجع حدود IFRA وSDS لكل مادة قبل الاستخدام على الجلد.</small></div>`;
+}
+function applyPerformancePlan(){
+ const p=pendingPerformancePlan;if(!p)return toast('حلل التركيبة أولاً');
+ for(const c of p.changes){
+   if(c.id==='__top_reduce'){
+     const tops=db.draft.notes.filter(n=>MATERIALS.find(m=>m.id===n.id)?.level==='افتتاحية');
+     if(tops.length){const each=Math.abs(c.delta)/tops.length;tops.forEach(n=>n.pct=Math.max(.1,Number(n.pct)-each))}
+     continue;
+   }
+   const n=db.draft.notes.find(x=>x.id===c.id);
+   if(n)n.pct=Math.max(.1,Number(n.pct)+c.delta);
+ }
+ for(const a of p.add){
+   const n=db.draft.notes.find(x=>x.id===a.id);
+   if(n)n.pct=Number(n.pct)+a.pct;else db.draft.notes.push({id:a.id,pct:a.pct});
+ }
+ const t=db.draft.notes.reduce((sum,n)=>sum+Number(n.pct||0),0);
+ db.draft.notes=db.draft.notes.map(n=>({...n,pct:Math.round(n.pct/t*1000)/10}));
+ const fix=100-db.draft.notes.reduce((sum,n)=>sum+n.pct,0);db.draft.notes[db.draft.notes.length-1].pct=Math.round((db.draft.notes[db.draft.notes.length-1].pct+fix)*10)/10;
+ save();pendingPerformancePlan=null;render();toast('تم تطبيق اقتراحات الأداء على التركيبة');
+}
+
 let pendingBatch=null;
 function materialSupplyId(materialId){return materialId+'-oil'}
 function calcBatch(){
