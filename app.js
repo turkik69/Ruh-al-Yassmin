@@ -27,25 +27,22 @@ const esc=s=>String(s??'').replace(/[&<>'"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&
 const toast=(m)=>{const t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),1800)};
 function setRoute(r){route=r;document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active',b.dataset.route===r));render()}
 document.querySelectorAll('.nav-item').forEach(b=>b.onclick=()=>setRoute(b.dataset.route));
-document.getElementById('themeBtn').onclick=()=>{db.theme=db.theme==='light'?'dark':'light';applyTheme();save()};
+const themeBtn=document.getElementById('themeBtn'); if(themeBtn) themeBtn.onclick=()=>{db.theme=db.theme==='light'?'dark':'light';applyTheme();save()};
 function applyTheme(){document.documentElement.classList.toggle('light',db.theme==='light')}; applyTheme();
 function home(){
- const last=db.formulas[0]; return `<section class="hero visual-hero">
-   <img src="hero-ui.jpg" alt="روح الياسمين - مختبر صناعة العطور">
-   <div class="hero-overlay"><span class="eyebrow">مختبرك الشخصي لصناعة العطور</span><h2>روح الياسمين</h2><p>حيث تتحول المشاعر إلى عطور</p></div>
+ return `<section class="hero visual-hero concept-hero">
+   <img src="hero-art.svg" alt="روح الياسمين - مختبر صناعة العطور">
+   <div class="hero-overlay concept-copy"><span class="eyebrow">مختبرك الشخصي لصناعة العطور</span><h2>روح الياسمين</h2><p>حيث تتحول المشاعر إلى عطور</p></div>
  </section>
- <div class="home-grid">
-   <button class="home-tile tile-pink" onclick="setRoute('create')"><span class="tile-copy"><b>اصنع عطرك</b><small>ابدأ تركيبتك خطوة بخطوة</small></span><span class="tile-icon">✦</span></button>
-   <button class="home-tile tile-teal" onclick="setRoute('lab')"><span class="tile-copy"><b>المختبر</b><small>اخلط وجرب وعدّل النسب</small></span><span class="tile-icon">⚗</span></button>
-   <button class="home-tile tile-lilac" onclick="setRoute('materials')"><span class="tile-copy"><b>مكتبة المواد</b><small>اكتشف المكونات وتوافقاتها</small></span><span class="tile-icon">◈</span></button>
-   <button class="home-tile tile-gold" onclick="setRoute('formulas')"><span class="tile-copy"><b>تركيباتي</b><small>احفظ الإصدارات وارجع لها</small></span><span class="tile-icon">▤</span></button>
-   <button class="home-tile tile-rose" onclick="last?openFormula(last.id):toast('احفظ أول تركيبة لتقييمها')"><span class="tile-copy"><b>التقييم</b><small>سجل ملاحظاتك الحسية</small></span><span class="tile-icon">♡</span></button>
-   <button class="home-tile tile-amber" onclick="setRoute('lab')"><span class="tile-copy"><b>دفعات الخلط</b><small>احسب الكميات وحجم الدفعة</small></span><span class="tile-icon">⚗</span></button>
+ <div class="home-grid concept-grid">
+   <button class="home-tile tile-pink art-card" onclick="setRoute('create')"><span class="card-art art-perfume">◉</span><span class="tile-copy"><b>اصنع عطرك</b><small>امزج المكونات وابتكر عطرك الخاص خطوة بخطوة</small></span><span class="tile-icon">→</span></button>
+   <button class="home-tile tile-teal art-card" onclick="setRoute('lab')"><span class="card-art art-lab">⚗</span><span class="tile-copy"><b>المختبر</b><small>أدوات احترافية للخلط وتجربة التركيبات</small></span><span class="tile-icon">→</span></button>
+   <button class="home-tile tile-lilac art-card" onclick="setRoute('materials')"><span class="card-art art-materials">✿</span><span class="tile-copy"><b>مكتبة المواد</b><small>اكتشف مكونات العطور الطبيعية والاصطناعية</small></span><span class="tile-icon">→</span></button>
+   <button class="home-tile tile-gold art-card" onclick="setRoute('formulas')"><span class="card-art art-book">▤</span><span class="tile-copy"><b>تركيباتي</b><small>احفظ وأدر تركيباتك الخاصة وإصداراتها</small></span><span class="tile-icon">→</span></button>
+   <button class="home-tile tile-rose art-card" onclick="setRoute('favorites')"><span class="card-art art-eval">♡</span><span class="tile-copy"><b>التقييم</b><small>قيّم التركيبات وسجل ملاحظاتك الحسية</small></span><span class="tile-icon">→</span></button>
+   <button class="home-tile tile-amber art-card" onclick="setRoute('lab')"><span class="card-art art-batch">⚗</span><span class="tile-copy"><b>دفعات الخلط</b><small>تابع دفعات الخلط واحسب كميات الإنتاج</small></span><span class="tile-icon">→</span></button>
  </div>
- <section class="journey"><b>رحلة لا تنتهي من الإبداع</b><small>اكتشف • امزج • جرّب • واصنع قصتك العطرية</small></section>
- <div class="section-title"><h3>لوحة المختبر</h3><span>محفوظ محليًا على جهازك</span></div><div class="grid">
- <div class="card"><p>التركيبات</p><div class="metric">${db.formulas.length}</div></div><div class="card"><p>المواد</p><div class="metric">${MATERIALS.length}</div></div>
- <div class="card full"><h4>آخر تركيبة</h4>${last?`<div class="formula"><div><strong>${esc(last.name)}</strong><small>${esc(last.mood)} • ${esc(last.occasion)} • ${last.notes.length} مواد</small></div><button class="ghost" onclick="openFormula('${last.id}')">فتح</button></div>`:'<p>لم تحفظ أي تركيبة بعد.</p>'}</div></div>`
+ <section class="journey concept-journey"><div><b>رحلة لا تنتهي من الإبداع</b><small>اكتشف • امزج • جرّب • واصنع قصتك العطرية</small></div><span>✿</span></section>`
 }
 function pageHero(title,subtitle,icon,variant='gold'){return `<section class="subpage-hero subpage-${variant}"><div class="subpage-hero-copy"><span class="subpage-kicker">روح الياسمين</span><h2>${icon} ${title}</h2><p>${subtitle}</p></div><div class="subpage-orb">${icon}</div></section>`}
 function create(){ const d=db.draft; return `${pageHero('اصنع عطرك','حوّل فكرتك إلى تركيبة عطرية خاصة بك خطوة بخطوة','✦','pink')}
@@ -76,7 +73,12 @@ function materialsHTML(arr){return arr.map((m,i)=>`<div class="material material
 function formulas(){return `${pageHero('تركيباتي','دفتر تركيباتك الخاصة وإصدارات V1 وV2 وV3','▤','gold')}
  <section class="formula-banner"><div><span>دفتر العطور</span><b>${db.formulas.length}</b><small>تركيبة محفوظة</small></div><div class="bottle-mark">✦</div></section>
  ${db.formulas.length?`<div class="material-list formula-cards">${db.formulas.map((f,i)=>`<div class="formula-card formula-tone-${i%4}"><div class="formula-v">${esc(f.version)}</div><div class="formula-copy"><strong>${esc(f.name)}</strong><small>${esc(f.mood)} • ${esc(f.occasion)}</small><small>${new Date(f.createdAt).toLocaleDateString('ar-OM')} • ${f.notes.length} مواد</small></div><button class="formula-open" onclick="openFormula('${f.id}')">فتح</button></div>`).join('')}</div>`:'<div class="empty lux-panel tone-gold">لا توجد تركيبات محفوظة حتى الآن. ابدأ من «اصنع عطرك» ثم احفظ أول إصدار لك.</div>'}`}
-function render(){view.innerHTML=({home,create,lab,materials,formulas}[route]||home)();bindDraftInputs()}
+function knowledge(){return `${pageHero('المعرفة','مرجعك السريع لفهم الهرم العطري والعائلات والتوافقات','▤','teal')}<div class="knowledge-grid"><button class="lux-panel tone-lilac knowledge-card" onclick="setRoute('materials')"><b>مكتبة المواد</b><small>خصائص المواد وقوتها وثباتها وتوافقاتها</small></button><section class="lux-panel tone-gold knowledge-card"><b>الهرم العطري</b><small>افتتاحية • قلب • قاعدة — ابنِ توازنًا واضحًا لكل تركيبة</small></section><section class="lux-panel tone-pink knowledge-card"><b>التجربة والتعتيق</b><small>سجل ملاحظات كل نسخة قبل الانتقال إلى الإصدار التالي</small></section></div>`}
+function favorites(){const list=db.formulas.slice(0,6);return `${pageHero('المفضلة','مكان سريع للرجوع إلى التركيبات التي تعمل عليها','♡','pink')}${list.length?`<div class="formula-cards material-list">${list.map((f,i)=>`<div class="formula-card formula-tone-${i%4}"><div class="formula-v">${esc(f.version)}</div><div class="formula-copy"><strong>${esc(f.name)}</strong><small>${esc(f.mood)} • ${f.notes.length} مواد</small></div><button class="formula-open" onclick="openFormula('${f.id}')">فتح</button></div>`).join('')}</div>`:'<div class="empty lux-panel tone-pink">عندما تحفظ تركيباتك ستظهر هنا للرجوع السريع.</div>'}`}
+function profile(){return `${pageHero('حسابي','مساحة روح الياسمين الشخصية على هذا الجهاز','♙','gold')}<section class="lux-panel tone-cream profile-card"><div class="profile-logo"><img src="icon.svg" alt=""></div><div><span class="mini-label">مختبر شخصي</span><h3>روح الياسمين</h3><p>تركيبات محفوظة: <b>${db.formulas.length}</b> • مواد المكتبة: <b>${MATERIALS.length}</b></p></div></section>`}
+function settings(){return `${pageHero('الإعدادات','إدارة تجربة التطبيق والبيانات المحلية','⚙','lilac')}<section class="lux-panel tone-lilac"><div class="panel-heading"><div><span class="mini-label">التطبيق</span><h3>روح الياسمين</h3></div><span class="panel-icon">⚙</span></div><p>يتم حفظ تركيباتك محليًا على هذا الجهاز حاليًا.</p><div class="actions"><button class="ghost" onclick="db.theme=db.theme==='light'?'dark':'light';applyTheme();save();render()">تبديل المظهر</button></div></section>`}
+
+function render(){view.innerHTML=({home,create,lab,materials,formulas,knowledge,favorites,profile,settings}[route]||home)();bindDraftInputs();window.scrollTo({top:0,behavior:'instant'})}
 function bindDraftInputs(){['fName','fMood','fOcc'].forEach(id=>{const e=document.getElementById(id);if(!e)return;e.onchange=()=>{if(id==='fName')db.draft.name=e.value;if(id==='fMood')db.draft.mood=e.value;if(id==='fOcc')db.draft.occasion=e.value;save()}})}
 function totalPct(){return Math.round(db.draft.notes.reduce((a,n)=>a+Number(n.pct||0),0)*10)/10}
 function updatePct(i,v){db.draft.notes[i].pct=Math.max(0,Number(v)||0);save();render()}
