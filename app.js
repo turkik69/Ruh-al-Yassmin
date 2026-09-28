@@ -92,6 +92,7 @@ function home(){
    <button class="home-tile tile-rose art-card" onclick="setRoute('favorites')"><span class="card-art art-eval">♡</span><span class="tile-copy"><b>التقييم</b><small>قيّم التركيبات وسجل ملاحظاتك الحسية</small></span><span class="tile-icon">→</span></button>
    <button class="home-tile tile-amber art-card" onclick="setRoute('lab')"><span class="card-art art-batch">⚗</span><span class="tile-copy"><b>دفعات الخلط</b><small>تابع دفعات الخلط واحسب كميات الإنتاج</small></span><span class="tile-icon">→</span></button>
    <button class="home-tile tile-supply art-card full-home-tile" onclick="setRoute('supplies')"><span class="card-art art-supply">🧴</span><span class="tile-copy"><b>تجهيزات مختبري</b><small>تابع الزيوت والكحول والزجاجات والقطّارات والكميات المتبقية في مخزونك</small></span><span class="tile-icon">→</span></button>
+   <button class="home-tile tile-clone art-card full-home-tile" onclick="setRoute('clone')"><span class="card-art art-clone">📷</span><span class="tile-copy"><b>استنساخ عطر</b><small>صوّر أي عطر، تعرّف عليه، واستخرج نوتاته لبناء نسخة مستوحاة خاصة بك</small></span><span class="tile-icon">→</span></button>
  </div>
  <section class="journey concept-journey"><div><b>رحلة لا تنتهي من الإبداع</b><small>اكتشف • امزج • جرّب • واصنع قصتك العطرية</small></div><span>✿</span></section>`
 }
@@ -166,6 +167,68 @@ function updateSupplyQty(id,value){
 }
 function resetSupplies(){db.supplies=SUPPLY_DEFAULTS.map(x=>({...x,bought:false,remaining:0,capacity:x.qty}));db.usageHistory=[];save();render();toast('تمت إعادة قائمة التجهيز والمخزون')}
 function markAllSupplies(value){db.supplies.forEach(x=>{x.bought=value;x.capacity=Number(x.qty)||0;x.remaining=value?(Number(x.qty)||0):0});save();renderKeepScroll()}
+
+let cloneImageData='';
+function clonePerfume(){return `${pageHero('استنساخ عطر','صوّر الزجاجة أو اختر صورة، ثم حوّل نوتاتها إلى تركيبة مستوحاة قابلة للتعديل','📷','pink')}
+<section class="clone-capture lux-panel tone-cream">
+ <div class="panel-heading"><div><span class="mini-label">التعرف البصري</span><h3>صوّر العطر</h3></div><span class="panel-icon">📷</span></div>
+ <label class="camera-drop" for="perfumePhoto"><input id="perfumePhoto" type="file" accept="image/*" capture="environment" onchange="previewPerfumePhoto(this)"><span class="camera-icon">◎</span><b>التقط صورة أو اخترها من الهاتف</b><small>اجعل اسم العطر والعلامة التجارية واضحين قدر الإمكان</small></label>
+ <div id="clonePreview" class="clone-preview"></div>
+ <div class="field clone-name"><label>اسم العطر — اختياري إذا كانت الصورة واضحة</label><input id="cloneName" placeholder="مثال: Dior Sauvage Elixir"></div>
+ <button class="ai-main-btn" id="cloneAnalyzeBtn" onclick="analyzePerfumePhoto()">✦ تعرّف على العطر وابحث عن مكوناته</button>
+ <div id="cloneResult" class="clone-result"></div>
+</section>
+<section class="clone-info lux-panel tone-lilac"><b>مهم</b><p>المصادر العامة تنشر عادة النوتات والـaccords، وليس الصيغة التجارية الدقيقة. لذلك سيصنع لك روح الياسمين نسخة <strong>مستوحاة</strong> وقابلة للتعديل داخل مختبرك، وليس نسخة مصنع مطابقة.</p></section>`}
+function previewPerfumePhoto(input){
+ const file=input.files?.[0];if(!file)return;
+ if(file.size>8*1024*1024)return toast('اختر صورة أصغر من 8 MB');
+ const reader=new FileReader();
+ reader.onload=()=>{cloneImageData=String(reader.result||'');const p=document.getElementById('clonePreview');if(p)p.innerHTML=`<img src="${cloneImageData}" alt="صورة العطر"><button onclick="clearClonePhoto()">×</button>`};
+ reader.readAsDataURL(file);
+}
+function clearClonePhoto(){cloneImageData='';const f=document.getElementById('perfumePhoto');if(f)f.value='';const p=document.getElementById('clonePreview');if(p)p.innerHTML=''}
+function cloneEndpoint(){return window.RUH_YASMIN_PERFUME_API||'./api/perfume-identify'}
+async function analyzePerfumePhoto(){
+ const manualName=document.getElementById('cloneName')?.value?.trim()||'';
+ if(!cloneImageData&&!manualName)return toast('صوّر العطر أو اكتب اسمه أولاً');
+ const btn=document.getElementById('cloneAnalyzeBtn'),box=document.getElementById('cloneResult');
+ if(btn){btn.disabled=true;btn.textContent='جاري التعرف والبحث...'} if(box)box.innerHTML='<div class="ai-thinking">✦ أحلل الزجاجة وأبحث عن النوتات...</div>';
+ try{
+   const res=await fetch(cloneEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:cloneImageData||null,name:manualName})});
+   if(!res.ok)throw new Error('ONLINE_UNAVAILABLE');
+   const data=await res.json();
+   showCloneResult(data);
+ }catch(e){
+   if(!manualName){if(box)box.innerHTML='<div class="ai-error">التعرف عبر الإنترنت يحتاج الخادم السحابي. اكتب اسم العطر أسفل الصورة وسأجهز لك نسخة مستوحاة فورًا.</div>';return}
+   const local=buildSmartPerfume(manualName);
+   showCloneResult({product_name:manualName,brand:'',confidence:'local',top_notes:[],heart_notes:[],base_notes:[],accords:[local.mood],rationale:'تم إنشاء اقتراح محلي من اسم العطر مؤقتًا إلى أن يصبح التعرف والبحث السحابي متاحًا.',clone_notes:local.notes,sources:[]});
+ }finally{if(btn){btn.disabled=false;btn.textContent='✦ تعرّف على العطر وابحث عن مكوناته'}}
+}
+function showCloneResult(data){
+ const box=document.getElementById('cloneResult');if(!box)return;
+ const notes=[...(data.top_notes||[]),...(data.heart_notes||[]),...(data.base_notes||[])];
+ box.innerHTML=`<div class="clone-found">
+   <div class="clone-title"><span>تم التعرف</span><h3>${esc([data.brand,data.product_name].filter(Boolean).join(' — ')||'العطر')}</h3></div>
+   ${notes.length?`<div class="clone-notes">${notes.map(x=>`<span>${esc(x)}</span>`).join('')}</div>`:''}
+   ${(data.accords||[]).length?`<p><b>الطابع:</b> ${esc(data.accords.join(' • '))}</p>`:''}
+   <p>${esc(data.rationale||'سأحوّل النوتات المنشورة إلى تركيبة مستوحاة باستخدام مواد مختبر روح الياسمين.')}</p>
+   ${Array.isArray(data.sources)&&data.sources.length?`<div class="clone-sources"><b>المصادر</b>${data.sources.slice(0,4).map(x=>`<a href="${esc(x.url||'#')}" target="_blank" rel="noopener">${esc(x.title||x.url||'مصدر')}</a>`).join('')}</div>`:''}
+   <button class="primary wide-btn" onclick='useCloneFormula(${JSON.stringify(data.clone_notes||[]).replace(/'/g,"&#39;")},${JSON.stringify(data.product_name||'نسخة مستوحاة').replace(/'/g,"&#39;")})'>أنشئ نسختي في المختبر</button>
+ </div>`;
+}
+function useCloneFormula(notes,name){
+ const valid=(Array.isArray(notes)?notes:[]).filter(n=>MATERIALS.some(m=>m.id===n.id)).map(n=>({id:n.id,pct:Number(n.pct)||0}));
+ if(!valid.length){
+   const fallback=buildSmartPerfume(String(name||'عطر فاخر'));
+   db.draft.notes=fallback.notes;db.draft.mood=fallback.mood;
+ }else{
+   const total=valid.reduce((a,n)=>a+n.pct,0)||1;
+   db.draft.notes=valid.map(n=>({...n,pct:Math.round(n.pct/total*1000)/10}));
+   const fix=100-db.draft.notes.reduce((a,n)=>a+n.pct,0);db.draft.notes[db.draft.notes.length-1].pct=Math.round((db.draft.notes[db.draft.notes.length-1].pct+fix)*10)/10;
+ }
+ db.draft.name='مستوحى من '+String(name||'عطر');
+ save();setRoute('lab');toast('تم إنشاء نسخة مستوحاة داخل المختبر');
+}
 
 function assistant(){return `${pageHero('مساعد روح الياسمين','صف عطرك بكلماتك ودع الذكاء الاصطناعي يبني لك نقطة بداية قابلة للتعديل','✦','teal')}
 <section class="ai-stage"><div class="ai-orb">✦</div><div><span class="mini-label">Ruh Al Yassmin AI</span><h3>ماذا تريد أن تصنع اليوم؟</h3><p>اكتب الإحساس، المناسبة، المواد التي تحبها أو ترفضها، والثبات أو الفوحان الذي تتوقعه.</p><div class="ai-status local">وضع احتياطي محلي فعال • الربط السحابي يحتاج Backend</div></div></section>
@@ -253,7 +316,7 @@ function generateLocalAI(text,openLab=false){
 
 function askAIFromCreate(){const idea=document.getElementById('idea')?.value?.trim();db.draft.name=document.getElementById('fName')?.value||db.draft.name;db.draft.mood=document.getElementById('fMood')?.value||db.draft.mood;db.draft.occasion=document.getElementById('fOcc')?.value||db.draft.occasion;save();setRoute('assistant');if(idea)setTimeout(()=>{const p=document.getElementById('aiPrompt');if(p)p.value=idea;askPerfumeAI(idea)},30)}
 function openAIReview(){const d=`راجع هذه التركيبة الحالية وطورها مع الحفاظ على فكرتها: ${db.draft.name||'بدون اسم'}، الطابع ${db.draft.mood}، الاستخدام ${db.draft.occasion}. المواد الحالية: ${db.draft.notes.map(n=>{const m=MATERIALS.find(x=>x.id===n.id);return m.name+' '+n.pct+'%'}).join('، ')}. أعطني نسخة أكثر توازنًا وثباتًا من نفس مواد المكتبة.`;setRoute('assistant');setTimeout(()=>{const p=document.getElementById('aiPrompt');if(p)p.value=d},30)}
-function render(){view.innerHTML=({home,create,lab,materials,formulas,knowledge,favorites,profile,settings,supplies,assistant}[route]||home)();bindDraftInputs()}
+function render(){view.innerHTML=({home,create,lab,materials,formulas,knowledge,favorites,profile,settings,supplies,clone:clonePerfume,assistant}[route]||home)();bindDraftInputs()}
 function bindDraftInputs(){['fName','fMood','fOcc'].forEach(id=>{const e=document.getElementById(id);if(!e)return;e.onchange=()=>{if(id==='fName')db.draft.name=e.value;if(id==='fMood')db.draft.mood=e.value;if(id==='fOcc')db.draft.occasion=e.value;save()}})}
 function totalPct(){return Math.round(db.draft.notes.reduce((a,n)=>a+Number(n.pct||0),0)*10)/10}
 function updatePct(i,v){db.draft.notes[i].pct=Math.max(0,Number(v)||0);save();render()}
