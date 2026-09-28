@@ -59,8 +59,18 @@ const modalContent=document.getElementById('modalContent');
 const save=()=>localStorage.setItem(DBKEY,JSON.stringify(db));
 const esc=s=>String(s??'').replace(/[&<>'"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[m]));
 const toast=(m)=>{const t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),1800)};
-function setRoute(r){route=r;document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active',b.dataset.route===r));render()}
-document.querySelectorAll('.nav-item').forEach(b=>b.onclick=()=>setRoute(b.dataset.route));
+function setRoute(r){
+ route=r;
+ document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active',b.dataset.route===r));
+ render();
+}
+window.setRoute=setRoute;
+document.addEventListener('click',e=>{
+ const btn=e.target.closest?.('.nav-item[data-route]');
+ if(!btn)return;
+ e.preventDefault();
+ setRoute(btn.dataset.route);
+});
 const themeBtn=document.getElementById('themeBtn'); if(themeBtn) themeBtn.onclick=()=>{db.theme=db.theme==='light'?'dark':'light';applyTheme();save()};
 function applyTheme(){document.documentElement.classList.toggle('light',db.theme==='light')}; applyTheme();
 function home(){
