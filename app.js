@@ -318,17 +318,14 @@ ${workflowStrip('knowledge')}
 function pyramid(){return `${pageHero('الهرم العطري','زجاجة واحدة توضّح كيف تتدرج الرائحة من الافتتاحية إلى القلب ثم القاعدة','◈','gold')}
 ${workflowStrip('knowledge')}
 <section class="pyramid-learning lux-panel tone-cream">
- <div class="perfume-bottle-wrap">
-  <div class="perfume-bottle-cap"></div>
-  <div class="perfume-bottle-neck"></div>
-  <div class="perfume-bottle">
-   <button class="bottle-layer bottle-top" onclick="showPyramidLevel('افتتاحية')"><span>01</span><div><b>الافتتاحية</b><small>الانطباع الأول • أخف وأسرع</small></div></button>
-   <button class="bottle-layer bottle-heart" onclick="showPyramidLevel('قلب')"><span>02</span><div><b>القلب</b><small>شخصية العطر • مركز التوازن</small></div></button>
-   <button class="bottle-layer bottle-base" onclick="showPyramidLevel('قاعدة')"><span>03</span><div><b>القاعدة</b><small>العمق والثبات • الأثر الأخير</small></div></button>
-  </div>
+ <div class="pyramid-bottle-image-wrap">
+  <img src="pyramid-bottle.jpg?v=34" class="pyramid-bottle-image" alt="زجاجة الهرم العطري">
+  <button class="pyramid-hotspot hotspot-top" onclick="showPyramidLevel('افتتاحية')" aria-label="شرح الافتتاحية"></button>
+  <button class="pyramid-hotspot hotspot-heart" onclick="showPyramidLevel('قلب')" aria-label="شرح القلب"></button>
+  <button class="pyramid-hotspot hotspot-base" onclick="showPyramidLevel('قاعدة')" aria-label="شرح القاعدة"></button>
  </div>
  <div class="pyramid-explain">
-  <span class="mini-label">اضغط على أي طبقة</span><h3>العطر يتغير مع الزمن</h3>
+  <span class="mini-label">اضغط على أي طبقة داخل الزجاجة</span><h3>العطر يتغير مع الزمن</h3>
   <p>الهرم لا يعني أن الطبقات منفصلة؛ بل تتداخل تدريجيًا. استخدم كل طبقة كنقطة قرار أثناء بناء التركيبة.</p>
   <div class="pyramid-ratio-guide"><span><i class="top"></i>افتتاحية <b>15–25%</b></span><span><i class="heart"></i>قلب <b>30–45%</b></span><span><i class="base"></i>قاعدة <b>30–45%</b></span></div>
   <small class="safety-note">هذه نطاقات تعليمية أولية وليست قاعدة ثابتة؛ تختلف حسب المواد والطابع والتركيز النهائي.</small>
@@ -782,8 +779,14 @@ function syncBatchFromConcentration(){
  setSelectValue('batchLongevity',cls.id==='perfume'?12:cls.id==='edp'?8:cls.id==='edt'?5:3);
  calcBatch();
 }
+function concentrationBottleCards(activeId){
+ return '<div class="concentration-bottles">'+PERFUME_CLASSES.map(x=>'<button type="button" class="conc-bottle-card '+(x.id===activeId?'active':'')+'" onclick="setBatchClassFromBottle(\''+x.id+'\')"><span class="mini-perfume-bottle"><i class="cap"></i><i class="glass"><i class="liquid" style="height:'+Math.max(14,Math.min(72,x.rec*2))+'%"></i></i></span><b>'+esc(x.name)+'</b><small>'+x.min+'–'+x.max+'% خلاصة</small><em>'+x.hMin+'–'+x.hMax+' س</em></button>').join('')+'</div>';
+}
+function setBatchClassFromBottle(id){
+ const cls=classById(id);setSelectValue('batchClass',cls.id);setSelectValue('conc',cls.rec);setSelectValue('batchLongevity',cls.id==='perfume'?12:cls.id==='edp'?8:cls.id==='edt'?5:3);calcBatch();
+}
 function batchGuidanceHTML(size,conc,oil,carrier,cls,projection){
- return '<div class="batch-guidance"><div class="batch-classification"><span>التصنيف المتوقع</span><b>'+esc(cls.name)+'</b><small>'+esc(cls.en)+'</small></div><div class="batch-mix-summary"><div><span>خلاصة عطرية</span><b>'+conc+'%</b><small>'+oil.toFixed(2)+' ml</small></div><div><span>كحول/قاعدة</span><b>'+(100-conc).toFixed(0)+'%</b><small>'+carrier.toFixed(2)+' ml</small></div></div><div class="batch-longevity">ثبات تقريبي: <b>'+cls.hMin+'–'+cls.hMax+' ساعات</b> • '+esc(batchProjectionAdvice(projection))+'</div><small class="safety-note">الثبات والفوحان تقديريان ويتأثران بالمواد الخام والبشرة والطقس. راجع IFRA وSDS وتعليمات المورد قبل الاستخدام الجلدي.</small></div>';
+ return '<div class="batch-guidance">'+concentrationBottleCards(cls.id)+'<div class="batch-classification"><span>التصنيف المتوقع</span><b>'+esc(cls.name)+'</b><small>'+esc(cls.en)+'</small></div><div class="batch-mix-summary"><div><span>خلاصة عطرية</span><b>'+conc+'%</b><small>'+oil.toFixed(2)+' ml</small></div><div><span>كحول/قاعدة</span><b>'+(100-conc).toFixed(0)+'%</b><small>'+carrier.toFixed(2)+' ml</small></div></div><div class="batch-longevity">ثبات تقريبي: <b>'+cls.hMin+'–'+cls.hMax+' ساعات</b> • '+esc(batchProjectionAdvice(projection))+'</div><small class="safety-note">الثبات والفوحان تقديريان ويتأثران بالمواد الخام والبشرة والطقس. راجع IFRA وSDS وتعليمات المورد قبل الاستخدام الجلدي.</small></div>';
 }
 function calcBatch(){
  const size=Number(document.getElementById('batchSize')?.value||50),conc=Number(document.getElementById('conc')?.value||20),projection=document.getElementById('batchProjection')?.value||'medium';
