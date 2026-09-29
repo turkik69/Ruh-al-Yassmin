@@ -27,6 +27,22 @@ function geminiSources(raw){
   }
   return out.slice(0,6);
 }
+async function findReferenceImage(sources){
+  const urls=(sources||[]).map(x=>x?.url).filter(Boolean).slice(0,4);
+  for(const url of urls){
+    try{
+      const r=await fetch(url,{headers:{'User-Agent':'Mozilla/5.0 RuhAlYassmin/1.0'},redirect:'follow'});
+      if(!r.ok)continue;
+      const html=(await r.text()).slice(0,500000);
+      const m=html.match(/<meta[^>]+(?:property|name)=["'](?:og:image|twitter:image(?::src)?)["'][^>]+content=["']([^"']+)["'][^>]*>/i)
+        || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["'](?:og:image|twitter:image(?::src)?)["'][^>]*>/i);
+      if(m?.[1]){
+        try{return new URL(m[1],url).href}catch{return m[1]}
+      }
+    }catch{}
+  }
+  return '';
+}
 async function callGeminiRobust(parts,{search=true,maxOutputTokens=1200,temperature=.2}={}){
   const makeBody=(withSearch)=>({
     contents:[{role:'user',parts}],
@@ -79,7 +95,10 @@ export default async function handler(req,res){
         year:String(x.year||'').slice(0,20),
         disambiguation:String(x.disambiguation||'').slice(0,240)
       })).filter(x=>x.product_name);
-      return res.status(200).json({mode:'candidates',query:name,candidates,sources:geminiSources(raw)});
+      const sources=geminiSources(raw);
+      const refImage=await findReferenceImage(sources);
+      const enriched=candidates.map(x=>({...x,image_url:x.image_url||refImage||''}));
+      return res.status(200).json({mode:'candidates',query:name,candidates:enriched,sources});
     }catch{return res.status(502).json({error:'MODEL_FORMAT',provider:'gemini'});}
   }
 
@@ -101,6 +120,7 @@ ${selected?'هذا هو المنتج الذي اختاره المستخدم تح
     const out=parseJsonText(extractGeminiText(raw));
     out.clone_notes=(out.clone_notes||[]).filter(n=>materials.includes(n.id)).map(n=>({id:n.id,pct:Number(n.pct)||0}));
     out.sources=geminiSources(raw);
+    out.image_url=String(out.image_url||selected?.image_url||await findReferenceImage(out.sources)||'');
     return res.status(200).json(out);
   }catch{return res.status(502).json({error:'MODEL_FORMAT',provider:'gemini',sources:geminiSources(raw)});}
 }
