@@ -238,7 +238,34 @@ function materialsHTML(arr){return arr.map((m,i)=>`<div class="material material
 function formulas(){return `${pageHero('تركيباتي','دفتر تركيباتك الخاصة وإصدارات V1 وV2 وV3','▤','gold')}
  <section class="formula-banner"><div><span>دفتر العطور</span><b>${db.formulas.length}</b><small>تركيبة محفوظة</small></div><div class="bottle-mark">✦</div></section>
  ${db.formulas.length?`<div class="material-list formula-cards">${db.formulas.map((f,i)=>`<div class="formula-card formula-tone-${i%4}"><div class="formula-v">${esc(f.version)}</div><div class="formula-copy"><strong>${esc(f.name)}</strong><small>${esc(f.mood)} • ${esc(f.occasion)}</small><small>${new Date(f.createdAt).toLocaleDateString('ar-OM')} • ${f.notes.length} مواد</small></div><button class="formula-open" onclick="openFormula('${f.id}')">فتح</button></div>`).join('')}</div>`:'<div class="empty lux-panel tone-gold">لا توجد تركيبات محفوظة حتى الآن. ابدأ من «اصنع عطرك» ثم احفظ أول إصدار لك.</div>'}`}
-function knowledge(){return `${pageHero('المعرفة','مرجعك السريع لفهم الهرم العطري والعائلات والتوافقات','▤','teal')}<div class="knowledge-grid"><button class="lux-panel tone-lilac knowledge-card" onclick="setRoute('materials')"><b>مكتبة المواد</b><small>خصائص المواد وقوتها وثباتها وتوافقاتها</small></button><section class="lux-panel tone-gold knowledge-card"><b>الهرم العطري</b><small>افتتاحية • قلب • قاعدة — ابنِ توازنًا واضحًا لكل تركيبة</small></section><section class="lux-panel tone-pink knowledge-card"><b>التجربة والتعتيق</b><small>سجل ملاحظات كل نسخة قبل الانتقال إلى الإصدار التالي</small></section></div>`}
+function knowledge(){return `${pageHero('المعرفة','افهم بنية العطر ثم انتقل مباشرة إلى المواد والمختبر','▤','teal')}
+${workflowStrip('knowledge')}
+<div class="knowledge-grid">
+ <button class="lux-panel tone-lilac knowledge-card" onclick="setRoute('materials')"><b>مكتبة المواد</b><small>خصائص المواد وقوتها وثباتها وتوافقاتها</small><strong>استكشف المواد ←</strong></button>
+ <button class="lux-panel tone-gold knowledge-card pyramid-entry" onclick="setRoute('pyramid')"><b>الهرم العطري</b><small>افتتاحية • قلب • قاعدة — شاهدها داخل زجاجة عطر تفاعلية</small><strong>افتح الهرم ←</strong></button>
+ <button class="lux-panel tone-pink knowledge-card" onclick="setRoute('formulas')"><b>التجربة والتطوير</b><small>ارجع لإصداراتك المحفوظة وطوّر الفوحان والثبات</small><strong>افتح تركيباتي ←</strong></button>
+</div>`}
+
+function pyramid(){return `${pageHero('الهرم العطري','زجاجة واحدة توضّح كيف تتدرج الرائحة من الافتتاحية إلى القلب ثم القاعدة','◈','gold')}
+${workflowStrip('knowledge')}
+<section class="pyramid-learning lux-panel tone-cream">
+ <div class="perfume-bottle-wrap">
+  <div class="perfume-bottle-cap"></div>
+  <div class="perfume-bottle-neck"></div>
+  <div class="perfume-bottle">
+   <button class="bottle-layer bottle-top" onclick="showPyramidLevel('افتتاحية')"><span>01</span><div><b>الافتتاحية</b><small>الانطباع الأول • أخف وأسرع</small></div></button>
+   <button class="bottle-layer bottle-heart" onclick="showPyramidLevel('قلب')"><span>02</span><div><b>القلب</b><small>شخصية العطر • مركز التوازن</small></div></button>
+   <button class="bottle-layer bottle-base" onclick="showPyramidLevel('قاعدة')"><span>03</span><div><b>القاعدة</b><small>العمق والثبات • الأثر الأخير</small></div></button>
+  </div>
+ </div>
+ <div class="pyramid-explain">
+  <span class="mini-label">اضغط على أي طبقة</span><h3>العطر يتغير مع الزمن</h3>
+  <p>الهرم لا يعني أن الطبقات منفصلة؛ بل تتداخل تدريجيًا. استخدم كل طبقة كنقطة قرار أثناء بناء التركيبة.</p>
+  <div class="pyramid-ratio-guide"><span><i class="top"></i>افتتاحية <b>15–25%</b></span><span><i class="heart"></i>قلب <b>30–45%</b></span><span><i class="base"></i>قاعدة <b>30–45%</b></span></div>
+  <small class="safety-note">هذه نطاقات تعليمية أولية وليست قاعدة ثابتة؛ تختلف حسب المواد والطابع والتركيز النهائي.</small>
+ </div>
+</section>
+<section class="knowledge-next"><button onclick="openMaterialsLevel('افتتاحية')">استكشف مواد الافتتاحية</button><button onclick="openMaterialsLevel('قلب')">استكشف مواد القلب</button><button onclick="openMaterialsLevel('قاعدة')">استكشف مواد القاعدة</button></section>`}
 function favorites(){const list=db.formulas.slice(0,6);return `${pageHero('المفضلة','مكان سريع للرجوع إلى التركيبات التي تعمل عليها','♡','pink')}${list.length?`<div class="formula-cards material-list">${list.map((f,i)=>`<div class="formula-card formula-tone-${i%4}"><div class="formula-v">${esc(f.version)}</div><div class="formula-copy"><strong>${esc(f.name)}</strong><small>${esc(f.mood)} • ${f.notes.length} مواد</small></div><button class="formula-open" onclick="openFormula('${f.id}')">فتح</button></div>`).join('')}</div>`:'<div class="empty lux-panel tone-pink">عندما تحفظ تركيباتك ستظهر هنا للرجوع السريع.</div>'}`}
 function profile(){return `${pageHero('حسابي','مساحة روح الياسمين الشخصية على هذا الجهاز','♙','gold')}
 <section class="lux-panel tone-cream profile-card"><div class="profile-logo"><img src="icon.svg" alt=""></div><div><span class="mini-label">مختبر شخصي</span><h3>روح الياسمين</h3><p>تركيبات محفوظة: <b>${db.formulas.length}</b> • مواد المكتبة: <b>${MATERIALS.length}</b></p></div></section>
