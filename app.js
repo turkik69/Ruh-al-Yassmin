@@ -122,6 +122,45 @@ function create(){ const d=db.draft; return `${pageHero('اصنع عطرك','ح�
  <div class="field"><textarea id="idea" placeholder="مثال: عطر رجالي فاخر، افتتاحيته منعشة، قلبه حار وقاعدته عود وعنبر..."></textarea></div>
  <div class="actions premium-actions"><button class="primary" onclick="askAIFromCreate()">✦ مساعد روح الياسمين AI</button><button class="ghost" onclick="setRoute('lab')">⚗ أكمل يدويًا في المختبر</button></div></section>
  <div class="section-title"><h3>المواد المختارة</h3><span>${d.notes.length} مادة</span></div>${draftNotesHTML()}` }
+
+async function searchPerfumeFromCreate(){
+ const q=document.getElementById('createPerfumeSearch')?.value?.trim()||'';
+ const box=document.getElementById('createPerfumeSearchResults');
+ if(!q)return toast('اكتب اسم العطر أولاً');
+ if(box)box.innerHTML='<div class="ai-thinking">✦ أبحث عن العطور والإصدارات المطابقة...</div>';
+ try{
+  const res=await fetch(cloneEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:q,mode:'search'})});
+  if(!res.ok)throw new Error('SEARCH_FAILED');
+  const data=await res.json();
+  createSearchCandidates=Array.isArray(data.candidates)?data.candidates.slice(0,10):[];
+  saveCloneArchive({type:'search',query:q,candidates:structuredClone(createSearchCandidates)});
+  if(!createSearchCandidates.length){
+   if(box)box.innerHTML='<div class="empty">لم أجد نتائج واضحة بهذا الاسم. جرّب كتابة العلامة التجارية مع اسم العطر.</div>';
+   return;
+  }
+  if(box)box.innerHTML='<div class="create-search-results">'+createSearchCandidates.map((x,i)=>'<button class="create-search-result" onclick="selectCreatePerfumeResult('+i+')"><div><b>'+esc(x.product_name||'عطر')+'</b><span>'+esc(x.brand||'علامة غير محددة')+(x.concentration?' • '+esc(x.concentration):'')+(x.year?' • '+esc(x.year):'')+'</span></div><small>'+esc(x.disambiguation||'اضغط لاختيار هذا الإصدار')+'</small><strong>اختيار ←</strong></button>').join('')+'</div>';
+ }catch(e){
+  if(box)box.innerHTML='<div class="ai-error">تعذر البحث الآن. تحقق من اتصال Backend ثم حاول مرة أخرى.</div>';
+ }
+}
+async function selectCreatePerfumeResult(index){
+ const item=createSearchCandidates[index];if(!item)return;
+ const box=document.getElementById('createPerfumeSearchResults');
+ if(box)box.innerHTML='<div class="ai-thinking">✦ أجلب نوتات '+esc([item.brand,item.product_name].filter(Boolean).join(' — '))+'...</div>';
+ try{
+  const res=await fetch(cloneEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+   mode:'identify',
+   name:[item.brand,item.product_name,item.concentration,item.year].filter(Boolean).join(' '),
+   selected:item
+  })});
+  if(!res.ok)throw new Error('DETAILS_FAILED');
+  const data=await res.json();
+  saveCloneArchive({type:'result',query:String(data?.product_name||item.product_name||''),data:structuredClone(data)});
+  useCloneFormula(data.clone_notes||[],data.product_name||item.product_name||'عطر');
+ }catch(e){
+  if(box)box.innerHTML='<div class="ai-error">تعذر جلب تفاصيل هذا العطر الآن. حاول مرة أخرى.</div>';
+ }
+}
 function draftNotesHTML(){if(!db.draft.notes.length)return '<div class="empty lux-panel tone-lilac">لم تضف مواد بعد. استخدم المساعد الذكي أو افتح المختبر لإضافة المواد.</div>';return `<div class="lux-panel tone-lilac formula-editor">${db.draft.notes.map((n,i)=>{const m=MATERIALS.find(x=>x.id===n.id);return `<div class="note-row perfume-row"><div class="material-dot">${m.icon}</div><div><strong>${m.name}</strong><small>${m.level} • ${m.family}</small></div><input type="number" min="0" max="100" value="${n.pct}" onchange="updatePct(${i},this.value)"><button onclick="removeNote(${i})">×</button></div>`}).join('')}<div class="mix-total"><div><span>إجمالي التركيبة</span><b>${totalPct()}%</b></div><div class="progress"><span style="width:${Math.min(100,totalPct())}%"></span></div></div></div>`}
 function lab(){const d=db.draft;return `${pageHero('المختبر','اخلط المواد، عدّل النسب، واحسب دفعتك بدقة','⚗','teal')}
  <div class="lab-summary">
@@ -255,6 +294,7 @@ function markAllSupplies(value){db.supplies.forEach(x=>{x.bought=value;x.capacit
 
 let cloneImageData='';
 let cloneCandidates=[];
+let createSearchCandidates=[];
 function clonePerfume(){return `${pageHero('استنساخ عطر','صوّر الزجاجة أو اختر صورة، ثم حوّل نوتاتها إلى تركيبة مستوحاة قابلة للتعديل','📷','pink')}
 <section class="clone-capture lux-panel tone-cream">
  <div class="panel-heading"><div><span class="mini-label">التعرف البصري</span><h3>صوّر العطر</h3></div><span class="panel-icon">📷</span></div>
