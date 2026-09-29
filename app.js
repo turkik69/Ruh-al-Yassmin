@@ -357,7 +357,7 @@ function backendPage(){
    <label class="backend-toggle"><input type="checkbox" ${db.backend.enabled?'checked':''} onchange="toggleBackend(this.checked)"><span>تفعيل Backend</span></label>
    <div class="field"><label>عنوان الخادم</label><input id="backendUrl" value="${esc(db.backend.url||'')}" placeholder="مثال: https://ruh-al-yassmin.vercel.app"></div>
    <small class="backend-help">اترك الحقل فارغًا إذا كان التطبيق نفسه منشورًا على Vercel. عند استخدام GitHub Pages ضع رابط مشروع Vercel هنا.</small>
-   <div class="actions"><button class="primary" onclick="saveBackendUrl()">حفظ العنوان</button><button class="ghost" onclick="testBackend()">اختبار الخادم</button><button class="ghost" onclick="testOpenAIBackend()">اختبار OpenAI</button></div>
+   <div class="actions"><button class="primary" onclick="saveBackendUrl()">حفظ العنوان</button><button class="ghost" onclick="testBackend()">اختبار الخادم</button><button class="ghost" onclick="testGeminiBackend()">اختبار Gemini</button></div>
    <div id="backendTestResult"></div>
  </section>
  <section class="lux-panel tone-lilac"><b>ما الذي يستخدم Backend؟</b><p>التعرف على العطر من الصورة، البحث عن نوتاته على الإنترنت، والمساعد الذكي السحابي. إذا تعذر الاتصال يبقى المساعد المحلي متاحًا.</p></section>`
@@ -385,8 +385,8 @@ async function testBackend(){
   if(box)box.innerHTML='<div class="backend-bad">تعذر الوصول إلى Backend. تأكد من رابط Vercel ونشر المشروع.</div>';
  }
 }
-async function testOpenAIBackend(){
- const box=document.getElementById('backendTestResult');if(box)box.innerHTML='<div class="ai-thinking">جاري اختبار اتصال OpenAI فعليًا...</div>';
+async function testGeminiBackend(){
+ const box=document.getElementById('backendTestResult');if(box)box.innerHTML='<div class="ai-thinking">جاري اختبار اتصال Gemini فعليًا...</div>';
  try{
   const r=await fetch(apiUrl('/api/diagnostics'),{cache:'no-store'});
   const data=await r.json();
@@ -396,15 +396,15 @@ async function testOpenAIBackend(){
   if(statusTitle)statusTitle.textContent='متصل';
   if(statusDot){statusDot.classList.remove('offline','unknown');statusDot.classList.add('online')}
   if(data.ok){
-    if(box)box.innerHTML=`<div class="backend-ok">✓ الخادم وOpenAI يعملان بنجاح • ${esc(data.model||'')}</div>`;
+    if(box)box.innerHTML=`<div class="backend-ok">✓ الخادم وGemini يعملان بنجاح • ${esc(data.model||'')}</div>`;
     return;
   }
   const code=String(data.code||'UNKNOWN');
-  let arabic='فشل اتصال OpenAI: '+code;
-  if(code==='credit_balance_exhausted'||code==='insufficient_quota')arabic='رصيد OpenAI API غير متوفر أو منتهي. أضف رصيدًا إلى حساب API.';
-  else if(code.includes('spend_limit'))arabic='تم الوصول إلى حد الإنفاق في مشروع OpenAI.';
-  else if(code==='invalid_api_key')arabic='مفتاح OpenAI غير صحيح أو لم يعد صالحًا.';
-  else if(data.httpStatus===404)arabic='النموذج المحدد غير متاح لهذا المشروع.';
+  let arabic='فشل اتصال Gemini: '+code;
+  if(code==='credit_balance_exhausted'||code==='insufficient_quota')arabic='تم تجاوز الحد المجاني أو الحصة المتاحة في Gemini.';
+  else if(code.includes('spend_limit'))arabic='تم تجاوز حد الاستخدام المتاح في Gemini.';
+  else if(code==='invalid_api_key')arabic='مفتاح Gemini غير صحيح أو لم يعد صالحًا.';
+  else if(data.httpStatus===404)arabic='نموذج Gemini المحدد غير متاح لهذا المفتاح.';
   if(box)box.innerHTML=`<div class="backend-bad"><b>${esc(arabic)}</b><small style="display:block;margin-top:6px">${esc(data.message||'')}</small></div>`;
  }catch(e){
   db.backend.lastStatus='offline';save();
@@ -609,7 +609,7 @@ async function askPerfumeAI(customPrompt){
      let detail='';
      try{const err=await res.json();detail=err?.details||err?.error||''}catch(_){}
      db.backend.lastStatus='online';save();
-     if(box&&detail)box.innerHTML=`<div class="ai-error">الخادم متصل، لكن OpenAI رفض الطلب: ${esc(detail)}</div>`;
+     if(box&&detail)box.innerHTML=`<div class="ai-error">الخادم متصل، لكن Gemini رفض الطلب: ${esc(detail)}</div>`;
    }catch(e){db.backend.lastStatus='offline';save()}
  }
 
