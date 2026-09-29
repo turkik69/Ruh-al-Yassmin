@@ -27,7 +27,8 @@ export default async function handler(req,res){
         model:process.env.OPENAI_MODEL||'gpt-5.6-luna',
         tools:[{type:'web_search'}],
         tool_choice:'auto',
-        input:searchPrompt
+        input:searchPrompt,
+        max_output_tokens:1200
       })
     });
     const raw=await sr.json();
@@ -36,7 +37,8 @@ export default async function handler(req,res){
     if(!txt)for(const item of raw.output||[])for(const c of item.content||[])if(c.type==='output_text')txt=c.text||txt;
     try{
       const clean=txt.replace(/^```json\s*/i,'').replace(/```$/,'').trim();
-      const out=JSON.parse(clean);
+      const first=clean.indexOf('{'),last=clean.lastIndexOf('}');
+      const out=JSON.parse(first>=0&&last>first?clean.slice(first,last+1):clean);
       const candidates=(Array.isArray(out.candidates)?out.candidates:[]).slice(0,10).map(x=>({
         brand:String(x.brand||'').slice(0,120),
         product_name:String(x.product_name||'').slice(0,180),
@@ -86,7 +88,8 @@ ${selected?`هذا هو المنتج الذي اختاره المستخدم تح
       tools:[{type:'web_search'}],
       tool_choice:'auto',
       include:['web_search_call.action.sources'],
-      input:[{role:'user',content}]
+      input:[{role:'user',content}],
+      max_output_tokens:1600
     })
   });
 
@@ -113,7 +116,8 @@ ${selected?`هذا هو المنتج الذي اختاره المستخدم تح
 
   try{
     const clean=text.replace(/^\`\`\`json\s*/i,'').replace(/\`\`\`$/,'').trim();
-    const out=JSON.parse(clean);
+    const first=clean.indexOf('{'),last=clean.lastIndexOf('}');
+    const out=JSON.parse(first>=0&&last>first?clean.slice(first,last+1):clean);
     out.clone_notes=(out.clone_notes||[]).filter(n=>materials.includes(n.id)).map(n=>({id:n.id,pct:Number(n.pct)||0}));
     out.sources=sources.slice(0,6);
     return res.status(200).json(out);
