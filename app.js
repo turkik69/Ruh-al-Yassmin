@@ -68,6 +68,7 @@ for(const def of SUPPLY_DEFAULTS){
  }
 }
 if(!Array.isArray(db.usageHistory))db.usageHistory=[];
+if(!Array.isArray(db.cloneArchive))db.cloneArchive=[];
 if(!db.backend)db.backend={enabled:true,url:'https://ruh-al-yassmin.vercel.app',lastStatus:'unknown'};
 if(!db.backend.url)db.backend.url='https://ruh-al-yassmin.vercel.app';
 const ROUTES=['home','create','lab','materials','formulas','knowledge','favorites','profile','settings','backend','supplies','clone','assistant'];
@@ -263,6 +264,10 @@ function clonePerfume(){return `${pageHero('استنساخ عطر','صوّر ا�
  <button class="ai-main-btn" id="cloneAnalyzeBtn" onclick="analyzePerfumePhoto()">✦ تعرّف على العطر وابحث عن مكوناته</button>
  <div id="cloneResult" class="clone-result"></div>
 </section>
+<section class="clone-archive lux-panel tone-gold">
+ <div class="panel-heading"><div><span class="mini-label">محفوظ تلقائيًا</span><h3>أرشيف الاستنساخ والبحث</h3></div><span class="panel-icon">🗂</span></div>
+ ${cloneArchiveHTML()}
+</section>
 <section class="clone-info lux-panel tone-lilac"><b>مهم</b><p>المصادر العامة تنشر عادة النوتات والـaccords، وليس الصيغة التجارية الدقيقة. لذلك سيصنع لك روح الياسمين نسخة <strong>مستوحاة</strong> وقابلة للتعديل داخل مختبرك، وليس نسخة مصنع مطابقة.</p></section>`}
 function previewPerfumePhoto(input){
  const file=input.files?.[0];if(!file)return;
@@ -290,8 +295,9 @@ async function analyzePerfumePhoto(){
    if(box)box.innerHTML='<div class="ai-error">تعذر البحث السحابي الآن. تحقق من Backend وOpenAI ثم حاول مرة أخرى.</div>';
  }finally{if(btn){btn.disabled=false;btn.textContent='✦ تعرّف على العطر وابحث عن مكوناته'}}
 }
-function showCloneCandidates(items,query){
+function showCloneCandidates(items,query,archive=true){
  cloneCandidates=items.slice(0,12);
+ if(archive)saveCloneArchive({type:'search',query:String(query||''),candidates:structuredClone(cloneCandidates)});
  const box=document.getElementById('cloneResult');if(!box)return;
  let html='<div class="clone-candidate-wrap"><div class="clone-title"><span>نتائج البحث</span><h3>اختر العطر المقصود</h3><p>وجدت عدة نتائج قريبة من «'+esc(query)+'». اختر المنتج الصحيح قبل بناء التركيبة.</p></div><div class="clone-candidate-list">';
  html+=cloneCandidates.map((x,i)=>'<button class="clone-candidate" onclick="selectCloneCandidate('+i+')"><div><b>'+esc(x.product_name||'عطر')+'</b><span>'+esc(x.brand||'علامة غير محددة')+(x.concentration?' • '+esc(x.concentration):'')+(x.year?' • '+esc(x.year):'')+'</span></div><small>'+esc(x.disambiguation||x.description||'اضغط لاختيار هذا العطر')+'</small><strong>اختيار ←</strong></button>').join('');
@@ -307,8 +313,9 @@ async function selectCloneCandidate(index){
   const data=await res.json();showCloneResult(data);
  }catch(e){if(box)box.innerHTML='<div class="ai-error">تعذر جلب تفاصيل العطر المختار. حاول مرة أخرى.</div>';}
 }
-function showCloneResult(data){
+function showCloneResult(data,archive=true){
  const box=document.getElementById('cloneResult');if(!box)return;
+ if(archive)saveCloneArchive({type:'result',query:String(data?.product_name||''),data:structuredClone(data)});
  const notes=[...(data.top_notes||[]),...(data.heart_notes||[]),...(data.base_notes||[])];
  box.innerHTML=`<div class="clone-found">
    <div class="clone-title"><span>تم التعرف</span><h3>${esc([data.brand,data.product_name].filter(Boolean).join(' — ')||'العطر')}</h3></div>
@@ -318,6 +325,37 @@ function showCloneResult(data){
    ${Array.isArray(data.sources)&&data.sources.length?`<div class="clone-sources"><b>المصادر</b>${data.sources.slice(0,4).map(x=>`<a href="${esc(x.url||'#')}" target="_blank" rel="noopener">${esc(x.title||x.url||'مصدر')}</a>`).join('')}</div>`:''}
    <button class="primary wide-btn" onclick='useCloneFormula(${JSON.stringify(data.clone_notes||[]).replace(/'/g,"&#39;")},${JSON.stringify(data.product_name||'نسخة مستوحاة').replace(/'/g,"&#39;")})'>أنشئ نسختي في المختبر</button>
  </div>`;
+}
+
+function saveCloneArchive(entry){
+ const item={id:crypto.randomUUID(),createdAt:new Date().toISOString(),...entry};
+ db.cloneArchive.unshift(item);
+ db.cloneArchive=db.cloneArchive.slice(0,100);
+ save();
+}
+function cloneArchiveHTML(){
+ if(!db.cloneArchive.length)return '<div class="empty">لا يوجد سجل بعد. أي بحث أو استنساخ جديد سيظهر هنا تلقائيًا.</div>';
+ return '<div class="clone-archive-list">'+db.cloneArchive.map(x=>{
+   const isResult=x.type==='result';
+   const d=x.data||{};
+   const title=isResult?([d.brand,d.product_name].filter(Boolean).join(' — ')||'عطر محفوظ'):(x.query||'بحث محفوظ');
+   const sub=isResult?'تركيبة مستوحاة محفوظة':((x.candidates||[]).length+' نتيجة محفوظة');
+   const date=new Date(x.createdAt).toLocaleDateString('ar-OM',{year:'numeric',month:'short',day:'numeric'});
+   return '<div class="clone-archive-item"><button class="archive-open" onclick="openCloneArchive(\''+x.id+'\')"><div><b>'+esc(title)+'</b><small>'+esc(sub)+' • '+esc(date)+'</small></div><span>فتح ←</span></button><button class="archive-delete" onclick="deleteCloneArchive(\''+x.id+'\')" aria-label="حذف">×</button></div>';
+ }).join('')+'</div>';
+}
+function openCloneArchive(id){
+ const item=db.cloneArchive.find(x=>x.id===id);if(!item)return;
+ if(item.type==='search'){
+   const input=document.getElementById('cloneName');if(input)input.value=item.query||'';
+   showCloneCandidates(item.candidates||[],item.query||'',false);
+ }else{
+   showCloneResult(item.data||{},false);
+ }
+ const box=document.getElementById('cloneResult');if(box)box.scrollIntoView({behavior:'smooth',block:'start'});
+}
+function deleteCloneArchive(id){
+ db.cloneArchive=db.cloneArchive.filter(x=>x.id!==id);save();renderKeepScroll();toast('تم حذف السجل من الأرشيف');
 }
 function useCloneFormula(notes,name){
  const valid=(Array.isArray(notes)?notes:[]).filter(n=>MATERIALS.some(m=>m.id===n.id)).map(n=>({id:n.id,pct:Number(n.pct)||0}));
