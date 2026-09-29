@@ -253,6 +253,7 @@ function resetSupplies(){db.supplies=SUPPLY_DEFAULTS.map(x=>({...x,bought:false,
 function markAllSupplies(value){db.supplies.forEach(x=>{x.bought=value;x.capacity=Number(x.qty)||0;x.remaining=value?(Number(x.qty)||0):0});save();renderKeepScroll()}
 
 let cloneImageData='';
+let cloneCandidates=[];
 function clonePerfume(){return `${pageHero('استنساخ عطر','صوّر الزجاجة أو اختر صورة، ثم حوّل نوتاتها إلى تركيبة مستوحاة قابلة للتعديل','📷','pink')}
 <section class="clone-capture lux-panel tone-cream">
  <div class="panel-heading"><div><span class="mini-label">التعرف البصري</span><h3>صوّر العطر</h3></div><span class="panel-icon">📷</span></div>
@@ -276,17 +277,35 @@ async function analyzePerfumePhoto(){
  const manualName=document.getElementById('cloneName')?.value?.trim()||'';
  if(!cloneImageData&&!manualName)return toast('صوّر العطر أو اكتب اسمه أولاً');
  const btn=document.getElementById('cloneAnalyzeBtn'),box=document.getElementById('cloneResult');
- if(btn){btn.disabled=true;btn.textContent='جاري التعرف والبحث...'} if(box)box.innerHTML='<div class="ai-thinking">✦ أحلل الزجاجة وأبحث عن النوتات...</div>';
+ const isNameSearch=!!manualName&&!cloneImageData;
+ if(btn){btn.disabled=true;btn.textContent=isNameSearch?'جاري البحث عن العطور المتشابهة...':'جاري التعرف والبحث...'}
+ if(box)box.innerHTML='<div class="ai-thinking">✦ '+(isNameSearch?'أبحث عن الإصدارات والعطور التي تحمل هذا الاسم...':'أحلل الزجاجة وأبحث عن النوتات...')+'</div>';
  try{
-   const res=await fetch(cloneEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:cloneImageData||null,name:manualName})});
+   const res=await fetch(cloneEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:cloneImageData||null,name:manualName,mode:isNameSearch?'search':'identify'})});
    if(!res.ok)throw new Error('ONLINE_UNAVAILABLE');
    const data=await res.json();
-   showCloneResult(data);
+   if(data.mode==='candidates'&&Array.isArray(data.candidates)&&data.candidates.length)showCloneCandidates(data.candidates,manualName);
+   else showCloneResult(data);
  }catch(e){
-   if(!manualName){if(box)box.innerHTML='<div class="ai-error">التعرف عبر الإنترنت يحتاج الخادم السحابي. اكتب اسم العطر أسفل الصورة وسأجهز لك نسخة مستوحاة فورًا.</div>';return}
-   const local=buildSmartPerfume(manualName);
-   showCloneResult({product_name:manualName,brand:'',confidence:'local',top_notes:[],heart_notes:[],base_notes:[],accords:[local.mood],rationale:'تم إنشاء اقتراح محلي من اسم العطر مؤقتًا إلى أن يصبح التعرف والبحث السحابي متاحًا.',clone_notes:local.notes,sources:[]});
+   if(box)box.innerHTML='<div class="ai-error">تعذر البحث السحابي الآن. تحقق من Backend وOpenAI ثم حاول مرة أخرى.</div>';
  }finally{if(btn){btn.disabled=false;btn.textContent='✦ تعرّف على العطر وابحث عن مكوناته'}}
+}
+function showCloneCandidates(items,query){
+ cloneCandidates=items.slice(0,12);
+ const box=document.getElementById('cloneResult');if(!box)return;
+ let html='<div class="clone-candidate-wrap"><div class="clone-title"><span>نتائج البحث</span><h3>اختر العطر المقصود</h3><p>وجدت عدة نتائج قريبة من «'+esc(query)+'». اختر المنتج الصحيح قبل بناء التركيبة.</p></div><div class="clone-candidate-list">';
+ html+=cloneCandidates.map((x,i)=>'<button class="clone-candidate" onclick="selectCloneCandidate('+i+')"><div><b>'+esc(x.product_name||'عطر')+'</b><span>'+esc(x.brand||'علامة غير محددة')+(x.concentration?' • '+esc(x.concentration):'')+(x.year?' • '+esc(x.year):'')+'</span></div><small>'+esc(x.disambiguation||x.description||'اضغط لاختيار هذا العطر')+'</small><strong>اختيار ←</strong></button>').join('');
+ html+='</div></div>';box.innerHTML=html;
+}
+async function selectCloneCandidate(index){
+ const item=cloneCandidates[index];if(!item)return;
+ const box=document.getElementById('cloneResult');
+ if(box)box.innerHTML='<div class="ai-thinking">✦ تم اختيار '+esc([item.brand,item.product_name].filter(Boolean).join(' — '))+'. أجلب النوتات الآن...</div>';
+ try{
+  const res=await fetch(cloneEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'identify',name:[item.brand,item.product_name,item.concentration,item.year].filter(Boolean).join(' '),selected:item})});
+  if(!res.ok)throw new Error('DETAILS_FAILED');
+  const data=await res.json();showCloneResult(data);
+ }catch(e){if(box)box.innerHTML='<div class="ai-error">تعذر جلب تفاصيل العطر المختار. حاول مرة أخرى.</div>';}
 }
 function showCloneResult(data){
  const box=document.getElementById('cloneResult');if(!box)return;
