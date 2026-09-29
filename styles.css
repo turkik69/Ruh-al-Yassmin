@@ -405,3 +405,40 @@ html,body{background:linear-gradient(180deg,#f8f2e9 0%,#f4e8dc 100%)}
 .formula-inventory.ok{background:rgba(76,175,120,.12)}
 .formula-inventory.warn{background:rgba(210,137,62,.12)}
 @media(min-width:700px){.pyramid-learning{grid-template-columns:1fr 1fr;align-items:center}}
+
+/* Scroll completion fix */
+html,body{
+  min-height:100%;
+  height:auto;
+  overflow-x:hidden;
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+}
+body{
+  min-height:100dvh;
+}
+.app-shell{
+  min-height:100dvh;
+  height:auto;
+  overflow:visible;
+  padding-bottom:calc(150px + env(safe-area-inset-bottom));
+}
+.view{
+  min-height:calc(100dvh - 90px);
+  height:auto;
+  overflow:visible;
+  padding-bottom:calc(180px + env(safe-area-inset-bottom));
+}
+.bottom-nav{
+  padding-bottom:calc(env(safe-area-inset-bottom) + 10px);
+}
+.pyramid-learning,
+.knowledge-next,
+.lux-panel:last-child,
+.view > *:last-child{
+  margin-bottom:24px;
+}
+@supports (-webkit-touch-callout:none){
+  .app-shell{padding-bottom:calc(180px + env(safe-area-inset-bottom))}
+  .view{padding-bottom:calc(210px + env(safe-area-inset-bottom))}
+}
