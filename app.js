@@ -69,9 +69,10 @@ for(const def of SUPPLY_DEFAULTS){
 }
 if(!Array.isArray(db.usageHistory))db.usageHistory=[];
 if(!Array.isArray(db.cloneArchive))db.cloneArchive=[];
+if(!Array.isArray(db.shoppingList))db.shoppingList=[];
 if(!db.backend)db.backend={enabled:true,url:'https://ruh-al-yassmin.vercel.app',lastStatus:'unknown'};
 if(!db.backend.url)db.backend.url='https://ruh-al-yassmin.vercel.app';
-const ROUTES=['home','create','lab','materials','formulas','knowledge','favorites','profile','settings','backend','supplies','clone','assistant'];
+const ROUTES=['home','create','lab','materials','formulas','knowledge','pyramid','favorites','profile','settings','backend','supplies','clone','assistant'];
 let route=ROUTES.includes(sessionStorage.getItem('ruhYasminRoute'))?sessionStorage.getItem('ruhYasminRoute'):'home';
 const view=document.getElementById('view');
 const modal=document.getElementById('modal');
@@ -110,6 +111,38 @@ function toggleAppTheme(){
 window.openBackendSettings=openBackendSettings;
 window.toggleAppTheme=toggleAppTheme;
 window.applyTheme=applyTheme;
+function workflowStrip(active){
+ const steps=[['knowledge','1','افهم'],['materials','2','اختر المواد'],['lab','3','اخلط'],['supplies','4','جهّز'],['formulas','5','احفظ وطوّر']];
+ return '<nav class="workflow-strip">'+steps.map(x=>'<button class="'+(active===x[0]?'active':'')+'" onclick="setRoute(\''+x[0]+'\')"><span>'+x[1]+'</span><b>'+x[2]+'</b></button>').join('')+'</nav>';
+}
+function levelMaterials(level){return MATERIALS.filter(m=>m.level===level)}
+function levelLabel(level){return level==='افتتاحية'?'الافتتاحية':level==='قلب'?'القلب':'القاعدة'}
+function normalizeDraftSilent(){
+ const t=db.draft.notes.reduce((s,n)=>s+Number(n.pct||0),0);if(!t)return;
+ db.draft.notes=db.draft.notes.map(n=>({...n,pct:Math.round(n.pct/t*1000)/10}));
+ const fix=100-db.draft.notes.reduce((s,n)=>s+n.pct,0);if(db.draft.notes.length)db.draft.notes[db.draft.notes.length-1].pct=Math.round((db.draft.notes[db.draft.notes.length-1].pct+fix)*10)/10;
+}
+function openMaterialsLevel(level){sessionStorage.setItem('ruhMaterialLevel',level);setRoute('materials')}
+function addToShoppingList(materialId){if(!db.shoppingList.includes(materialId))db.shoppingList.push(materialId);save();toast('تمت الإضافة إلى قائمة تجهيز المختبر')}
+function removeFromShoppingList(materialId){db.shoppingList=db.shoppingList.filter(x=>x!==materialId);save();renderKeepScroll()}
+function formulasUsingMaterial(id){return db.formulas.filter(f=>(f.notes||[]).some(n=>n.id===id))}
+function showPyramidLevel(level){
+ const mats=levelMaterials(level);
+ const info=level==='افتتاحية'?['أول انطباع يصل للأنف','سريعة الظهور وأكثر تطايرًا','تمنح الشرارة والفوحان الأول']:level==='قلب'?['شخصية العطر الأساسية','تربط الافتتاحية بالقاعدة','تظهر بعد هدوء البداية']:['عمق العطر وثباته','الأبطأ تبخرًا','تحمل الأثر النهائي للعطر'];
+ modalContent.innerHTML='<h3>'+levelLabel(level)+'</h3><div class="pyramid-modal-points">'+info.map(x=>'<div>• '+x+'</div>').join('')+'</div><div class="pyramid-modal-materials">'+mats.map(m=>'<button onclick="modal.close();materialInfo(\''+m.id+'\')"><span>'+m.icon+'</span><b>'+m.name+'</b><small>'+m.family+'</small></button>').join('')+'</div><div class="actions"><button class="primary" onclick="modal.close();startFromPyramid(\''+level+'\')">ابدأ بهذه الفئة في المختبر</button><button class="ghost" onclick="modal.close();openMaterialsLevel(\''+level+'\')">استكشف مواد الفئة</button></div>';
+ modal.showModal();
+}
+function startFromPyramid(level){
+ const mats=levelMaterials(level).slice(0,4),basePct=level==='قاعدة'?12:level==='قلب'?10:8;
+ mats.forEach(m=>{const n=db.draft.notes.find(x=>x.id===m.id);if(n)n.pct+=basePct;else db.draft.notes.push({id:m.id,pct:basePct})});
+ if(db.draft.notes.length)normalizeDraftSilent();save();setRoute('lab');toast('تم تجهيز بداية من '+levelLabel(level));
+}
+function labStockWarningsHTML(){
+ if(!db.draft.notes.length)return '';
+ const issues=db.draft.notes.map(n=>{const m=MATERIALS.find(x=>x.id===n.id),s=db.supplies.find(x=>x.id===materialSupplyId(n.id));if(!s?.bought)return {id:n.id,name:m?.name||n.id,type:'missing',text:'غير موجود في المخزون'};const p=stockPercent(s);if(p<=20)return {id:n.id,name:m?.name||n.id,type:'low',text:'المتبقي '+p+'%'};return null}).filter(Boolean);
+ if(!issues.length)return '<section class="lab-stock-ok">✓ مواد التركيبة الأساسية مسجلة في مخزونك وبكميات جيدة.</section>';
+ return '<section class="lab-stock-warnings"><div><b>حالة مواد هذه التركيبة</b><small>اربط التركيبة بمخزونك قبل تنفيذ الدفعة</small></div>'+issues.map(x=>'<button onclick="addToShoppingList(\''+x.id+'\');setRoute(\'supplies\')"><span class="'+x.type+'">'+(x.type==='missing'?'!':'↓')+'</span><div><b>'+esc(x.name)+'</b><small>'+esc(x.text)+'</small></div><strong>تجهيز ←</strong></button>').join('')+'</section>';
+}
 function home(){
  return `<section class="hero visual-hero concept-hero">
    <img src="hero-art.svg" alt="روح الياسمين - مختبر صناعة العطور">
