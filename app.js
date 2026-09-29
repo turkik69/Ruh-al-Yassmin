@@ -609,28 +609,61 @@ function assistant(){return `${pageHero('مساعد روح الياسمين','ص
 <div id="aiResult" class="ai-result"></div></section>`}
 function fillAI(text){const el=document.getElementById('aiPrompt');if(el){el.value=text;el.focus()}}
 function setAILoading(on){const b=document.getElementById('aiSendBtn');if(b){b.disabled=on;b.textContent=on?'جاري تحليل فكرتك...':'✦ أنشئ التركيبة بالذكاء الاصطناعي'}}
-function aiContext(){return {name:db.draft.name||'',mood:db.draft.mood||'',occasion:db.draft.occasion||'',gender:db.draft.gender||'',current_notes:db.draft.notes.map(n=>({id:n.id,pct:Number(n.pct)}))}}
+let aiPendingFormula=null;
+let aiRequestMode='new';
+function aiContext(includeCurrent=false){
+ const base={gender:db.draft.gender||''};
+ if(includeCurrent){
+   base.name=db.draft.name||'';
+   base.mood=db.draft.mood||'';
+   base.occasion=db.draft.occasion||'';
+   base.current_notes=db.draft.notes.map(n=>({id:n.id,pct:Number(n.pct)}));
+ }
+ return base;
+}
 async function askPerfumeAI(customPrompt){
  const prompt=customPrompt||document.getElementById('aiPrompt')?.value?.trim();
  if(!prompt)return toast('اكتب وصف العطر أولاً');
  const box=document.getElementById('aiResult');
+ const requestMode=aiRequestMode||'new';
+ aiRequestMode='new';
+ aiPendingFormula=null;
  setAILoading(true);
  if(box)box.innerHTML='<div class="ai-thinking">✦ روح الياسمين يحلل وصفك ويبني التركيبة...</div>';
 
  if(db.backend?.enabled){
    try{
-     const res=await fetch(apiUrl('/api/ai'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,context:aiContext()})});
+     const res=await fetch(apiUrl('/api/ai'),{
+       method:'POST',
+       headers:{'Content-Type':'application/json'},
+       body:JSON.stringify({
+         prompt,
+         context:aiContext(requestMode==='review'),
+         mode:requestMode
+       })
+     });
      if(res.ok){
        const data=await res.json();
        const valid=(data.notes||[]).filter(n=>MATERIALS.some(m=>m.id===n.id)).map(n=>({id:n.id,pct:Number(n.pct)||0}));
        if(valid.length){
-         const total=valid.reduce((a,n)=>a+n.pct,0)||1;
+         const total=valid.reduce((sum,n)=>sum+n.pct,0)||1;
          data.notes=valid.map(n=>({...n,pct:Math.round(n.pct/total*1000)/10}));
-         const fix=100-data.notes.reduce((a,n)=>a+n.pct,0);
+         const fix=100-data.notes.reduce((sum,n)=>sum+n.pct,0);
          data.notes[data.notes.length-1].pct=Math.round((data.notes[data.notes.length-1].pct+fix)*10)/10;
-         applySmartPerfume(data);
-         if(box)box.innerHTML=`<div class="ai-success"><b>${esc(data.name||'تركيبة ذكية')}</b><p>${esc(data.rationale||'تم إنشاء تركيبة قابلة للتعديل داخل المختبر.')}</p><div class="ai-note-tags">${data.notes.map(n=>{const m=MATERIALS.find(x=>x.id===n.id);return `<span>${m.name} ${n.pct}%</span>`}).join('')}</div><button class="primary wide-btn" onclick="setRoute('lab')">فتح التركيبة في المختبر</button></div>`;
-         db.backend.lastStatus='online';save();setAILoading(false);toast('تم إنشاء التركيبة بالذكاء الاصطناعي السحابي');return;
+         aiPendingFormula={
+           name:data.name||'تركيبة ذكية',
+           mood:data.mood||'',
+           occasion:data.occasion||'',
+           rationale:data.rationale||'',
+           notes:data.notes.map(n=>({...n}))
+         };
+         if(box)box.innerHTML=`<div class="ai-success">
+           <b>${esc(aiPendingFormula.name)}</b>
+           <p>${esc(aiPendingFormula.rationale||'تم إنشاء تركيبة قابلة للتعديل داخل المختبر.')}</p>
+           <div class="ai-note-tags">${aiPendingFormula.notes.map(n=>{const m=MATERIALS.find(x=>x.id===n.id);return `<span>${m.name} ${n.pct}%</span>`}).join('')}</div>
+           <button class="primary wide-btn" onclick="applyPendingAIFormula()">اعتماد الوصفة وفتحها في المختبر</button>
+         </div>`;
+         db.backend.lastStatus='online';save();setAILoading(false);toast('تم إنشاء وصفة جديدة بالذكاء الاصطناعي');return;
        }
      }
      let detail='';
@@ -642,11 +675,39 @@ async function askPerfumeAI(customPrompt){
 
  await new Promise(r=>setTimeout(r,250));
  const result=buildSmartPerfume(prompt);
- applySmartPerfume(result);
- if(box)box.innerHTML=`<div class="ai-success"><b>${esc(result.name)}</b><p>${esc(result.rationale)}</p><div class="ai-note-tags">${result.notes.map(n=>{const m=MATERIALS.find(x=>x.id===n.id);return `<span>${m.name} ${n.pct}%</span>`}).join('')}</div><small class="backend-help">تم استخدام المحرك المحلي لأن Backend غير متاح.</small><button class="primary wide-btn" onclick="setRoute('lab')">فتح التركيبة في المختبر</button></div>`;
+ aiPendingFormula={
+   name:result.name,
+   mood:result.mood,
+   occasion:result.occasion,
+   rationale:result.rationale,
+   notes:result.notes.map(n=>({...n}))
+ };
+ if(box)box.innerHTML=`<div class="ai-success">
+   <b>${esc(aiPendingFormula.name)}</b>
+   <p>${esc(aiPendingFormula.rationale)}</p>
+   <div class="ai-note-tags">${aiPendingFormula.notes.map(n=>{const m=MATERIALS.find(x=>x.id===n.id);return `<span>${m.name} ${n.pct}%</span>`}).join('')}</div>
+   <small class="backend-help">تم استخدام المحرك المحلي لأن Backend غير متاح.</small>
+   <button class="primary wide-btn" onclick="applyPendingAIFormula()">اعتماد الوصفة وفتحها في المختبر</button>
+ </div>`;
  setAILoading(false);
- toast('تم إنشاء التركيبة الذكية');
+ toast('تم إنشاء الوصفة الذكية');
 }
+function applyPendingAIFormula(){
+ if(!aiPendingFormula)return toast('لا توجد وصفة جديدة لاعتمادها');
+ db.draft={
+   name:String(aiPendingFormula.name||'تركيبة ذكية'),
+   mood:String(aiPendingFormula.mood||''),
+   occasion:String(aiPendingFormula.occasion||''),
+   gender:db.draft.gender||'للجميع',
+   notes:aiPendingFormula.notes.map(n=>({id:n.id,pct:Number(n.pct)||0}))
+ };
+ save();
+ aiPendingFormula=null;
+ setRoute('lab');
+ toast('تم اعتماد الوصفة الجديدة فقط');
+}
+window.applyPendingAIFormula=applyPendingAIFormula;
+
 function buildSmartPerfume(text){
  const lower=String(text||'').toLowerCase();
  let ids=['bergamot','neroli','lavender','cedar','sandal','musk'];
@@ -682,10 +743,13 @@ function buildSmartPerfume(text){
  return {name,mood,occasion,rationale,notes};
 }
 function applySmartPerfume(result){
- db.draft.name=db.draft.name||result.name;
- db.draft.mood=result.mood;
- db.draft.occasion=result.occasion;
- db.draft.notes=result.notes.map(n=>({...n}));
+ db.draft={
+  name:String(result.name||'تركيبة ذكية'),
+  mood:String(result.mood||''),
+  occasion:String(result.occasion||''),
+  gender:db.draft.gender||'للجميع',
+  notes:(result.notes||[]).map(n=>({id:n.id,pct:Number(n.pct)||0}))
+ };
  save();
 }
 function generateLocalAI(text,openLab=false){
@@ -694,8 +758,8 @@ function generateLocalAI(text,openLab=false){
  toast('تم إنشاء تركيبة أولية');
  if(openLab)setRoute('lab'); else render();
 }
-function askAIFromCreate(){const idea=document.getElementById('idea')?.value?.trim();db.draft.name=document.getElementById('fName')?.value||db.draft.name;db.draft.mood=document.getElementById('fMood')?.value||db.draft.mood;db.draft.occasion=document.getElementById('fOcc')?.value||db.draft.occasion;save();setRoute('assistant');if(idea)setTimeout(()=>{const p=document.getElementById('aiPrompt');if(p)p.value=idea;askPerfumeAI(idea)},30)}
-function openAIReview(){const d=`راجع هذه التركيبة الحالية وطورها مع الحفاظ على فكرتها: ${db.draft.name||'بدون اسم'}، الطابع ${db.draft.mood}، الاستخدام ${db.draft.occasion}. المواد الحالية: ${db.draft.notes.map(n=>{const m=MATERIALS.find(x=>x.id===n.id);return m.name+' '+n.pct+'%'}).join('، ')}. أعطني نسخة أكثر توازنًا وثباتًا من نفس مواد المكتبة.`;setRoute('assistant');setTimeout(()=>{const p=document.getElementById('aiPrompt');if(p)p.value=d},30)}
+function askAIFromCreate(){aiRequestMode='new';const idea=document.getElementById('idea')?.value?.trim();db.draft.name=document.getElementById('fName')?.value||db.draft.name;db.draft.mood=document.getElementById('fMood')?.value||db.draft.mood;db.draft.occasion=document.getElementById('fOcc')?.value||db.draft.occasion;save();setRoute('assistant');if(idea)setTimeout(()=>{const p=document.getElementById('aiPrompt');if(p)p.value=idea;askPerfumeAI(idea)},30)}
+function openAIReview(){aiRequestMode='review';const d=`راجع هذه التركيبة الحالية وطورها مع الحفاظ على فكرتها: ${db.draft.name||'بدون اسم'}، الطابع ${db.draft.mood}، الاستخدام ${db.draft.occasion}. المواد الحالية: ${db.draft.notes.map(n=>{const m=MATERIALS.find(x=>x.id===n.id);return m.name+' '+n.pct+'%'}).join('، ')}. أعطني نسخة أكثر توازنًا وثباتًا من نفس مواد المكتبة.`;setRoute('assistant');setTimeout(()=>{const p=document.getElementById('aiPrompt');if(p)p.value=d},30)}
 function render(){view.innerHTML=({home,create,lab,materials,formulas,knowledge,pyramid,favorites,profile,settings,backend:backendPage,supplies,clone:clonePerfume,assistant}[route]||home)();bindDraftInputs()}
 function bindDraftInputs(){['fName','fMood','fOcc'].forEach(id=>{const e=document.getElementById(id);if(!e)return;e.onchange=()=>{if(id==='fName')db.draft.name=e.value;if(id==='fMood')db.draft.mood=e.value;if(id==='fOcc')db.draft.occasion=e.value;save()}});if(route==='lab')requestAnimationFrame(()=>calcBatch())}
 function totalPct(){return Math.round(db.draft.notes.reduce((a,n)=>a+Number(n.pct||0),0)*10)/10}
