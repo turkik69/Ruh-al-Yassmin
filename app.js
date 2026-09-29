@@ -335,9 +335,13 @@ async function testOpenAIBackend(){
  try{
   const r=await fetch(apiUrl('/api/diagnostics'),{cache:'no-store'});
   const data=await r.json();
+  db.backend.lastStatus='online';save();
+  const statusTitle=document.querySelector('.backend-status-row h3');
+  const statusDot=document.querySelector('.backend-dot');
+  if(statusTitle)statusTitle.textContent='متصل';
+  if(statusDot){statusDot.classList.remove('offline','unknown');statusDot.classList.add('online')}
   if(data.ok){
-    db.backend.lastStatus='online';save();
-    if(box)box.innerHTML=`<div class="backend-ok">✓ OpenAI يعمل بنجاح • ${esc(data.model||'')}</div>`;
+    if(box)box.innerHTML=`<div class="backend-ok">✓ الخادم وOpenAI يعملان بنجاح • ${esc(data.model||'')}</div>`;
     return;
   }
   const code=String(data.code||'UNKNOWN');
@@ -348,7 +352,12 @@ async function testOpenAIBackend(){
   else if(data.httpStatus===404)arabic='النموذج المحدد غير متاح لهذا المشروع.';
   if(box)box.innerHTML=`<div class="backend-bad"><b>${esc(arabic)}</b><small style="display:block;margin-top:6px">${esc(data.message||'')}</small></div>`;
  }catch(e){
-  if(box)box.innerHTML='<div class="backend-bad">تعذر تشغيل اختبار OpenAI. أعد نشر آخر نسخة من المشروع على Vercel.</div>';
+  db.backend.lastStatus='offline';save();
+  const statusTitle=document.querySelector('.backend-status-row h3');
+  const statusDot=document.querySelector('.backend-dot');
+  if(statusTitle)statusTitle.textContent='غير متصل';
+  if(statusDot){statusDot.classList.remove('online','unknown');statusDot.classList.add('offline')}
+  if(box)box.innerHTML='<div class="backend-bad">تعذر الوصول إلى Backend نفسه. تحقق من اتصال الإنترنت أو نشر Vercel.</div>';
  }
 }
 
