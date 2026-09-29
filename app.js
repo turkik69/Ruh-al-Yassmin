@@ -732,12 +732,15 @@ window.applyPendingAIFormula=applyPendingAIFormula;
 
 function localPerformanceFromText(text){
  const t=String(text||'').toLowerCase();
- let classId='edp',projection='medium',concentration=20,longevity=8,reason='توازن عام بين الثبات والفوحان حسب وصفك.';
- if(/خفيف|ناعم|صيف|نهاري|منعش|كولونيا/.test(t)){classId='edt';projection='soft';concentration=12;longevity=5;reason='الوصف يميل لعطر أخف وأنسب للنهار أو الأجواء الدافئة.'}
- if(/قوي|فواح|فوحان|مسائي|سبايسي|شرقي/.test(t)){classId='edp';projection='strong';concentration=22;longevity=8;reason='الوصف يطلب حضورًا أوضح وفوحانًا أقوى مع ثبات جيد.'}
- if(/ثابت|ثبات|عود|دخاني|ثقيل|مركز|نقي|بارفيوم/.test(t)){classId='perfume';projection=/فواح|قوي/.test(t)?'strong':'medium';concentration=/شديد|قوي جدًا|مركز/.test(t)?35:30;longevity=12;reason='الوصف يميل لقاعدة أثقل وثبات أطول، لذلك رُفع تركيز الخلاصة.'}
- if(/قوي جدًا|فوحان قوي جدًا/.test(t))projection='very-strong';
- return {classId,projection,concentration,longevity,reason};
+ let p={classId:'edp',projection:'medium',concentration:20,longevity:8,reason:'توازن عام حسب وصفك.'};
+ if(/خفيف|خفيفة|لطيف|لطيفة|صيفي|صيفية|نهاري|نهارية|منعش|منعشة/.test(t))p={classId:'edt',projection:'soft',concentration:11,longevity:5,reason:'الوصف يطلب عطرًا أخف وأهدأ.'};
+ if(/ناعم|ناعمة|هادئ|هادئة|راقي|راقية|نظيف|نظيفة/.test(t))p={classId:'edp',projection:'soft',concentration:17,longevity:7,reason:'الوصف ناعم مع ثبات جيد وفوحان قريب.'};
+ if(/قوي جدًا|قوية جدًا|فواح جدًا|صارخ|حاد جدًا|مزعج|مزعجة/.test(t))p={classId:'edp',projection:'very-strong',concentration:18,longevity:7,reason:'الوصف يطلب انتشارًا حادًا؛ رُفع الفوحان دون رفع التركيز بشكل مبالغ.'};
+ else if(/قوي|قوية|فواح|فواحة|واضح|واضحة|حضور/.test(t))p={classId:'edp',projection:'strong',concentration:22,longevity:9,reason:'الوصف يطلب حضورًا وفوحانًا قويين.'};
+ if(/ثابت جدًا|ثبات طويل|مركز جدًا|ثقيل جدًا/.test(t))p={classId:'perfume',projection:/فواح|قوي/.test(t)?'strong':'medium',concentration:32,longevity:14,reason:'الطلب يركز على الثبات والعمق.'};
+ else if(/ثابت|ثبات|ثقيل|ثقيلة|مركز|مركزة|عود|دخاني|دخانية/.test(t))p={classId:'perfume',projection:/فواح|قوي/.test(t)?'strong':'medium',concentration:28,longevity:12,reason:'الوصف يميل لقاعدة أثقل وثبات أطول.'};
+ if(/كولونيا|cologne/.test(t))p={classId:'edc',projection:'soft',concentration:7,longevity:3,reason:'طابع كولونيا خفيف وسريع.'};
+ return p;
 }
 function buildSmartPerfume(text){
  const lower=String(text||'').toLowerCase();
@@ -766,8 +769,10 @@ function buildSmartPerfume(text){
    mood=/صيف|منعش|حمضي/.test(lower)?'منعش':'نظيف';name=/فندق|نظيف/.test(lower)?'ردهة فاخرة':'نسيم الياسمين';
    rationale='افتتاحية حمضية مشرقة مع قلب نظيف وقاعدة أرز ومسك تمنح ثباتًا وأناقة دون حلاوة زائدة.';
  }
- if(/قوي|فواح|فوحان/.test(lower)){weights[weights.length-1]+=3;weights[0]-=3}
- if(/ناعم|خفيف/.test(lower)){weights[0]+=3;weights[weights.length-1]-=3}
+ if(/قوي جدًا|فواح جدًا|صارخ|مزعج/.test(lower)){weights[0]+=7;weights[1]+=4;weights[weights.length-1]-=4;rationale+=' تم دفع الافتتاحية والقلب لرفع الانتشار.'}
+ else if(/قوي|فواح|فوحان/.test(lower)){weights[0]+=4;weights[1]+=2;weights[weights.length-1]-=2}
+ if(/ناعم|هادئ/.test(lower)){weights[0]-=4;weights[weights.length-1]+=4;rationale+=' تم تهدئة الافتتاحية لصنع فوحان أقرب وأنعم.'}
+ if(/خفيف|صيفي|نهاري/.test(lower)){weights[0]+=5;weights[weights.length-1]-=5;rationale+=' تم تخفيف القاعدة وإبراز المواد الأخف.'}
  const total=weights.reduce((a,b)=>a+b,0);
  const notes=ids.map((id,i)=>({id,pct:Math.round(weights[i]/total*1000)/10}));
  const fix=100-notes.reduce((a,n)=>a+n.pct,0);notes[notes.length-1].pct=Math.round((notes[notes.length-1].pct+fix)*10)/10;
