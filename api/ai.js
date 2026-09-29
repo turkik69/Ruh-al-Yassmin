@@ -1,5 +1,18 @@
 const MATERIAL_IDS=['bergamot','lemon','lavender','rose','jasmine','cardamom','saffron','cedar','sandal','oud','amber','vanilla','musk','leather','neroli','patchouli','vetiver','blackpepper','clove','cinnamon','cypriol','guaiac','frankincense'];
 
+const GEMINI_MODEL=process.env.GEMINI_MODEL||'gemini-2.5-flash-lite';
+function geminiUrl(){
+  return 'https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(GEMINI_MODEL)+':generateContent';
+}
+function extractGeminiText(raw){
+  return (raw?.candidates?.[0]?.content?.parts||[]).map(p=>p?.text||'').join('').trim();
+}
+function parseJsonText(text){
+  const clean=String(text||'').replace(/^```json\s*/i,'').replace(/```$/,'').trim();
+  const first=clean.indexOf('{'),last=clean.lastIndexOf('}');
+  return JSON.parse(first>=0&&last>first?clean.slice(first,last+1):clean);
+}
+
 export default async function handler(req,res){
   res.setHeader('Access-Control-Allow-Origin','*');
   res.setHeader('Access-Control-Allow-Headers','Content-Type');
@@ -7,7 +20,7 @@ export default async function handler(req,res){
   res.setHeader('Cache-Control','no-store');
   if(req.method==='OPTIONS') return res.status(204).end();
   if(req.method!=='POST') return res.status(405).json({error:'METHOD_NOT_ALLOWED'});
-  if(!process.env.OPENAI_API_KEY) return res.status(503).json({error:'AI_NOT_CONFIGURED'});
+  if(!process.env.GEMINI_API_KEY) return res.status(503).json({error:'AI_NOT_CONFIGURED',provider:'gemini'});
 
   const prompt=String(req.body?.prompt||'').slice(0,5000);
   const context=req.body?.context||{};
@@ -15,38 +28,22 @@ export default async function handler(req,res){
 
   const instructions=`أنت خبير عطور داخل تطبيق "روح الياسمين". اقترح صيغة عطرية تجريبية فقط من المعرفات التالية: ${MATERIAL_IDS.join(', ')}. اجعل مجموع النسب 100، وعدد المواد 5 إلى 8. أعد JSON فقط بالشكل {"name":"","mood":"","occasion":"","rationale":"","notes":[{"id":"bergamot","pct":15}]}. لا تدّع أن النسب آمنة للاستخدام الجلدي بمجرد اقتراحها؛ اجعل rationale يذكر مراجعة IFRA وSDS وحدود المورد وإجراء اختبار مناسب قبل الاستخدام.`;
 
-  const r=await fetch('https://api.openai.com/v1/responses',{
+  const r=await fetch(geminiUrl(),{
     method:'POST',
-    headers:{'Authorization':'Bearer '+process.env.OPENAI_API_KEY,'Content-Type':'application/json'},
+    headers:{'x-goog-api-key':process.env.GEMINI_API_KEY,'Content-Type':'application/json'},
     body:JSON.stringify({
-      model:process.env.OPENAI_MODEL||'gpt-5.6-luna',
-      input:[
-        {role:'system',content:instructions},
-        {role:'user',content:JSON.stringify({request:prompt,context})}
-      ],
-      max_output_tokens:1200
+      contents:[{role:'user',parts:[{text:instructions+'\n\nطلب المستخدم وسياقه:\n'+JSON.stringify({request:prompt,context})}]}],
+      generationConfig:{responseMimeType:'application/json',temperature:0.35,maxOutputTokens:1200}
     })
   });
-  const raw=await r.json();
-  if(!r.ok) return res.status(r.status).json({error:'OPENAI_ERROR',details:raw?.error?.message||'Request failed'});
-
-  let text=typeof raw.output_text==='string'?raw.output_text:'';
-  if(!text){
-    for(const item of raw.output||[]){
-      for(const c of item.content||[]){
-        if(c.type==='output_text'&&typeof c.text==='string'){text=c.text;break;}
-      }
-      if(text)break;
-    }
-  }
+  const raw=await r.json().catch(()=>({}));
+  if(!r.ok) return res.status(r.status).json({error:'GEMINI_ERROR',details:raw?.error?.message||'Request failed',provider:'gemini'});
 
   try{
-    const clean=text.replace(/^\`\`\`json\s*/i,'').replace(/\`\`\`$/,'').trim();
-    const first=clean.indexOf('{'),last=clean.lastIndexOf('}');
-    const out=JSON.parse(first>=0&&last>first?clean.slice(first,last+1):clean);
+    const out=parseJsonText(extractGeminiText(raw));
     out.notes=(out.notes||[]).filter(n=>MATERIAL_IDS.includes(n.id)).map(n=>({id:n.id,pct:Number(n.pct)||0}));
     return res.status(200).json(out);
   }catch{
-    return res.status(502).json({error:'MODEL_FORMAT'});
+    return res.status(502).json({error:'MODEL_FORMAT',provider:'gemini'});
   }
 }
