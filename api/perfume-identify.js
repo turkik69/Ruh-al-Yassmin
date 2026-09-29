@@ -12,7 +12,7 @@ export default async function handler(req,res){
 
   const materials=[
     'bergamot','lemon','lavender','rose','jasmine','cardamom','saffron',
-    'cedar','sandal','oud','amber','vanilla','musk','leather','neroli'
+    'cedar','sandal','oud','amber','vanilla','musk','leather','neroli','patchouli','vetiver','blackpepper','clove','cinnamon','cypriol','guaiac','frankincense'
   ];
 
   const prompt=`
