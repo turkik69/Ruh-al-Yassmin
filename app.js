@@ -23,6 +23,12 @@ const MATERIALS = [
   {id:'frankincense',name:'لبان',en:'Frankincense',family:'راتنجي بخوري',level:'قاعدة',power:8,life:8,icon:'◈',pairs:['عود','باتشولي','عنبر','فلفل أسود']},
   {id:'neroli',name:'نيرولي',en:'Neroli',family:'زهري حمضي',level:'افتتاحية',power:5,life:4,icon:'✿',pairs:['برغموت','مسك','ياسمين','صندل']}
 ];
+const PERFUME_CLASSES=[
+ {id:'perfume',name:'عطر نقي',en:'Perfume',min:25,max:40,rec:30,hMin:9,hMax:16,projection:'قوي'},
+ {id:'edp',name:'ماء عطر',en:'Eau de Parfum',min:15,max:25,rec:20,hMin:6,hMax:9,projection:'متوسط إلى قوي'},
+ {id:'edt',name:'ماء تواليت',en:'Eau de Toilette',min:8,max:15,rec:12,hMin:4,hMax:6,projection:'متوسط'},
+ {id:'edc',name:'ماء كولونيا',en:'Eau de Cologne',min:5,max:15,rec:8,hMin:2,hMax:4,projection:'خفيف إلى متوسط'}
+];
 const SUPPLY_DEFAULTS=[
  {id:'bergamot-oil',category:'زيوت ومواد عطرية',name:'برغموت',qty:30,unit:'ml',note:'مادة افتتاحية أساسية ومتعددة الاستخدام'},
  {id:'lemon-oil',category:'زيوت ومواد عطرية',name:'ليمون',qty:30,unit:'ml',note:'للافتتاحيات المنعشة والحمضية'},
@@ -276,9 +282,15 @@ function lab(){const d=db.draft;return `${pageHero('المختبر','اخلط ا
    <button class="perf-analyze-btn" onclick="analyzePerformance()">حلّل التركيبة واقترح التعديلات</button>
    <div id="performanceResult"></div>
  </section>
- <section class="lux-panel tone-gold batch-panel"><div class="panel-heading"><div><span class="mini-label">دفعات الخلط</span><h3>حساب كمية الإنتاج</h3></div><span class="panel-icon">🧪</span></div>
- <div class="grid"><div class="field"><label>حجم العبوة ml</label><input id="batchSize" type="number" value="50" min="1"></div><div class="field"><label>تركيز الزيت العطري</label><select id="conc"><option value="20">EDP 20%</option><option value="25" selected>EDP+ 25%</option><option value="30">Parfum 30%</option><option value="35">Extrait 35%</option></select></div></div><button class="ghost wide-btn" onclick="calcBatch()">احسب الكميات</button><div id="batchResult"></div></section>
- <section class="lux-panel tone-rose"><div class="panel-heading"><div><span class="mini-label">إدارة الإصدارات</span><h3>احفظ تركيبتك</h3></div><span class="panel-icon">📖</span></div><div class="field"><label>ملاحظات النسخة</label><textarea id="versionNotes" placeholder="مثال: قللت الفانيلا وزدت الصندل..."></textarea></div><button class="primary wide-btn" onclick="saveFormula()">حفظ نسخة جديدة V</button></section>`}
+ <section class="lux-panel tone-gold batch-panel"><div class="panel-heading"><div><span class="mini-label">تجهيز وصناعة العطر</span><h3>النوع • الثبات • الفوحان • الكمية</h3></div><span class="panel-icon">🧪</span></div>
+<div class="batch-smart-grid">
+<div class="field"><label>تصنيف العطر</label><select id="batchClass" onchange="syncBatchFromClass()">${PERFUME_CLASSES.map(x=>`<option value="${x.id}" ${x.id==='edp'?'selected':''}>${x.name} — ${x.en}</option>`).join('')}</select></div>
+<div class="field"><label>مدة الثبات المستهدفة</label><select id="batchLongevity" onchange="syncBatchFromLongevity()"><option value="3">2–4 ساعات</option><option value="5">4–6 ساعات</option><option value="8" selected>6–9 ساعات</option><option value="12">9–16 ساعة</option></select></div>
+<div class="field"><label>الفوحان المطلوب</label><select id="batchProjection" onchange="calcBatch()"><option value="soft">ناعم</option><option value="medium" selected>متوازن</option><option value="strong">قوي</option><option value="very-strong">قوي جدًا</option></select></div>
+<div class="field"><label>حجم العبوة</label><select id="batchSize" onchange="calcBatch()"><option value="10">10 ml</option><option value="30">30 ml</option><option value="50" selected>50 ml</option><option value="100">100 ml</option><option value="200">200 ml</option></select></div>
+<div class="field"><label>نسبة خلاصة العطر</label><select id="conc" onchange="syncBatchFromConcentration()"><option value="5">5%</option><option value="8">8%</option><option value="10">10%</option><option value="12">12%</option><option value="15">15%</option><option value="18">18%</option><option value="20" selected>20%</option><option value="22">22%</option><option value="25">25%</option><option value="30">30%</option><option value="35">35%</option><option value="40">40%</option></select></div>
+</div><div id="batchGuidance"></div><div id="batchResult"></div></section>
+<section class="lux-panel tone-rose"><div class="panel-heading"><div><span class="mini-label">إدارة الإصدارات</span><h3>احفظ تركيبتك</h3></div><span class="panel-icon">📖</span></div><div class="field"><label>ملاحظات النسخة</label><textarea id="versionNotes" placeholder="مثال: قللت الفانيلا وزدت الصندل..."></textarea></div><button class="primary wide-btn" onclick="saveFormula()">حفظ نسخة جديدة V</button></section>`}
 function materials(){
  const level=sessionStorage.getItem('ruhMaterialLevel')||'';
  const list=level?MATERIALS.filter(m=>m.level===level):MATERIALS;
