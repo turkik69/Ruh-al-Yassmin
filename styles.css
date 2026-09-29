@@ -480,3 +480,25 @@ body{
 .batch-stock-line{margin:10px 0;padding:9px;border-radius:12px;background:rgba(255,255,255,.04)}
 .empty.compact{padding:14px}
 @media(max-width:520px){.batch-smart-grid{grid-template-columns:1fr}.batch-table>div{grid-template-columns:1.2fr .7fr .9fr}}
+
+/* Real pyramid bottle artwork */
+.pyramid-bottle-image-wrap{position:relative;display:grid;place-items:center;min-height:420px;padding:8px 0}
+.pyramid-bottle-image{width:min(86vw,360px);height:auto;display:block;filter:drop-shadow(0 18px 24px rgba(103,69,26,.18))}
+.pyramid-hotspot{position:absolute;left:50%;transform:translateX(-50%);width:min(72vw,300px);border:0;background:transparent;z-index:3}
+.hotspot-top{top:22%;height:22%}
+.hotspot-heart{top:44%;height:21%}
+.hotspot-base{top:65%;height:24%}
+.pyramid-hotspot:active{background:rgba(255,255,255,.08);border-radius:22px}
+
+/* Concentration bottle selector */
+.concentration-bottles{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:12px}
+.conc-bottle-card{border:1px solid var(--line);background:rgba(255,255,255,.045);color:inherit;border-radius:16px;padding:9px 5px;display:grid;place-items:center;gap:4px;text-align:center}
+.conc-bottle-card.active{border-color:rgba(184,137,51,.55);background:rgba(212,173,94,.16);box-shadow:0 8px 20px rgba(126,86,26,.1)}
+.conc-bottle-card b{font-size:11px}
+.conc-bottle-card small{font-size:9px;color:var(--muted);line-height:1.35}
+.conc-bottle-card em{font-style:normal;font-size:9px;color:var(--gold,#b58b43)}
+.mini-perfume-bottle{width:40px;height:56px;display:grid;grid-template-rows:12px 1fr;place-items:center}
+.mini-perfume-bottle .cap{width:22px;height:10px;border-radius:4px 4px 2px 2px;background:linear-gradient(180deg,#d8c090,#85672f)}
+.mini-perfume-bottle .glass{position:relative;width:36px;height:44px;border:2px solid rgba(125,104,80,.55);border-radius:8px 8px 12px 12px;overflow:hidden;background:linear-gradient(90deg,rgba(255,255,255,.58),rgba(255,255,255,.18))}
+.mini-perfume-bottle .liquid{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(180deg,rgba(221,177,81,.45),rgba(174,118,44,.75));border-radius:5px 5px 9px 9px}
+@media(max-width:430px){.concentration-bottles{gap:5px}.conc-bottle-card{padding:8px 3px}.conc-bottle-card b{font-size:10px}.pyramid-bottle-image{width:min(88vw,340px)}}
