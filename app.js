@@ -319,7 +319,7 @@ function pyramid(){return `${pageHero('الهرم العطري','زجاجة وا
 ${workflowStrip('knowledge')}
 <section class="pyramid-learning lux-panel tone-cream">
  <div class="pyramid-bottle-image-wrap">
-  <img src="pyramid-bottle.jpg?v=34" class="pyramid-bottle-image" alt="زجاجة الهرم العطري">
+  <img src="pyramid-bottle.jpg?v=35" class="pyramid-bottle-image" alt="زجاجة الهرم العطري">
   <button class="pyramid-hotspot hotspot-top" onclick="showPyramidLevel('افتتاحية')" aria-label="شرح الافتتاحية"></button>
   <button class="pyramid-hotspot hotspot-heart" onclick="showPyramidLevel('قلب')" aria-label="شرح القلب"></button>
   <button class="pyramid-hotspot hotspot-base" onclick="showPyramidLevel('قاعدة')" aria-label="شرح القاعدة"></button>
