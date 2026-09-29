@@ -95,6 +95,21 @@ function renderKeepScroll(){
 window.setRoute=setRoute;
 const themeBtn=document.getElementById('themeBtn'); if(themeBtn) themeBtn.onclick=()=>{db.theme=db.theme==='light'?'dark':'light';applyTheme();save()};
 function applyTheme(){document.documentElement.classList.toggle('light',db.theme==='light')}; applyTheme();
+function openBackendSettings(){
+ sessionStorage.setItem('ruhYasminRoute','backend');
+ route='backend';
+ render();
+ window.scrollTo({top:0,behavior:'instant'});
+}
+function toggleAppTheme(){
+ db.theme=db.theme==='light'?'dark':'light';
+ applyTheme();
+ save();
+ render();
+}
+window.openBackendSettings=openBackendSettings;
+window.toggleAppTheme=toggleAppTheme;
+window.applyTheme=applyTheme;
 function home(){
  return `<section class="hero visual-hero concept-hero">
    <img src="hero-art.svg" alt="روح الياسمين - مختبر صناعة العطور">
@@ -204,8 +219,8 @@ function openProfileFormulas(){
 }
 function settings(){return `${pageHero('الإعدادات','إدارة تجربة التطبيق والاتصال بالخادم','⚙','lilac')}
 <section class="settings-menu">
- <button class="setting-card backend-setting" onclick="setRoute('backend')"><span class="setting-icon">☁</span><div><b>Backend</b><small>تشغيل وفحص خادم الذكاء الاصطناعي والتعرف على العطور</small></div><span class="setting-arrow">←</span></button>
- <section class="lux-panel tone-lilac"><div class="panel-heading"><div><span class="mini-label">التطبيق</span><h3>روح الياسمين</h3></div><span class="panel-icon">⚙</span></div><p>يتم حفظ تركيباتك وقائمة مشتريات المختبر محليًا على هذا الجهاز.</p><div class="actions"><button class="ghost" onclick="db.theme=db.theme==='light'?'dark':'light';applyTheme();save();render()">تبديل المظهر</button></div></section>
+ <button type="button" class="setting-card backend-setting" onclick="openBackendSettings()"><span class="setting-icon">☁</span><div><b>Backend</b><small>تشغيل وفحص خادم الذكاء الاصطناعي والتعرف على العطور</small></div><span class="setting-arrow">←</span></button>
+ <section class="lux-panel tone-lilac"><div class="panel-heading"><div><span class="mini-label">التطبيق</span><h3>روح الياسمين</h3></div><span class="panel-icon">⚙</span></div><p>يتم حفظ تركيباتك وقائمة مشتريات المختبر محليًا على هذا الجهاز.</p><div class="actions"><button type="button" class="ghost" onclick="toggleAppTheme()">تبديل المظهر</button></div></section>
 </section>`}
 
 function backendPage(){
