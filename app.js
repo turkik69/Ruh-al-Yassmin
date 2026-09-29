@@ -210,7 +210,7 @@ async function selectHomePerfumeResult(index){
   if(!res.ok)throw new Error('DETAILS_FAILED');
   const data=await res.json();
   saveCloneArchive({type:'result',query:String(data?.product_name||item.product_name||''),data:structuredClone(data)});
-  useCloneFormula(data.clone_notes||[],data.product_name||item.product_name||'عطر');
+  await useCloneFormula(data.clone_notes||[],data.product_name||item.product_name||'عطر',data.image_url||item.image_url||'');
  }catch(e){if(box)box.innerHTML='<div class="ai-error">تعذر جلب تفاصيل هذا العطر الآن.</div>'}
 }
 function pageHero(title,subtitle,icon,variant='gold'){return `<section class="subpage-hero subpage-${variant}"><button class="page-back-btn" onclick="goBack()" aria-label="رجوع">←</button><div class="subpage-hero-copy"><span class="subpage-kicker">روح الياسمين</span><h2>${icon} ${title}</h2><p>${subtitle}</p></div><button class="subpage-orb" onclick="setRoute('home')" aria-label="العودة للرئيسية">${icon}</button></section>`}
@@ -257,7 +257,7 @@ async function selectCreatePerfumeResult(index){
   if(!res.ok)throw new Error('DETAILS_FAILED');
   const data=await res.json();
   saveCloneArchive({type:'result',query:String(data?.product_name||item.product_name||''),data:structuredClone(data)});
-  useCloneFormula(data.clone_notes||[],data.product_name||item.product_name||'عطر');
+  await useCloneFormula(data.clone_notes||[],data.product_name||item.product_name||'عطر',data.image_url||item.image_url||'');
  }catch(e){
   if(box)box.innerHTML='<div class="ai-error">تعذر جلب تفاصيل هذا العطر الآن. حاول مرة أخرى.</div>';
  }
@@ -308,7 +308,7 @@ function materialsHTML(arr){return arr.map((m,i)=>`<div class="material material
 function formulas(){return `${pageHero('تركيباتي','دفتر تركيباتك الخاصة وإصدارات V1 وV2 وV3','▤','gold')}
  ${workflowStrip('formulas')}
  <section class="formula-banner"><div><span>دفتر العطور</span><b>${db.formulas.length}</b><small>تركيبة محفوظة</small></div><div class="bottle-mark">✦</div></section>
- ${db.formulas.length?`<div class="material-list formula-cards">${db.formulas.map((f,i)=>`<div class="formula-card formula-tone-${i%4}"><div class="formula-v">${esc(f.version)}</div><div class="formula-copy"><strong>${esc(f.name)}</strong><small>${esc(f.mood)} • ${esc(f.occasion)}</small><small>${new Date(f.createdAt).toLocaleDateString('ar-OM')} • ${f.notes.length} مواد</small></div><button class="formula-open" onclick="openFormula('${f.id}')">فتح</button></div>`).join('')}</div>`:'<div class="empty lux-panel tone-gold">لا توجد تركيبات محفوظة حتى الآن. ابدأ من «اصنع عطرك» ثم احفظ أول إصدار لك.</div>'}`}
+ ${db.formulas.length?`<div class="material-list formula-cards">${db.formulas.map((f,i)=>`<div class="formula-card formula-tone-${i%4}"><div class="formula-v">${esc(f.version)}</div>${f.sourcePerfumeThumb?`<div class="formula-thumb-wrap"><img class="formula-thumb" src="${esc(f.sourcePerfumeThumb)}" alt="${esc(f.sourcePerfumeName||f.name)}"></div>`:''}<div class="formula-copy"><strong>${esc(f.name)}</strong><small>${esc(f.mood)} • ${esc(f.occasion)}</small><small>${new Date(f.createdAt).toLocaleDateString('ar-OM')} • ${f.notes.length} مواد</small></div><button class="formula-open" onclick="openFormula('${f.id}')">فتح</button></div>`).join('')}</div>`:'<div class="empty lux-panel tone-gold">لا توجد تركيبات محفوظة حتى الآن. ابدأ من «اصنع عطرك» ثم احفظ أول إصدار لك.</div>'}`}
 function knowledge(){return `${pageHero('المعرفة','افهم بنية العطر ثم انتقل مباشرة إلى المواد والمختبر','▤','teal')}
 ${workflowStrip('knowledge')}
 <div class="knowledge-grid">
@@ -508,6 +508,40 @@ function previewPerfumePhoto(input){
  reader.readAsDataURL(file);
 }
 function clearClonePhoto(){cloneImageData='';const cam=document.getElementById('perfumeCamera');const gal=document.getElementById('perfumeGallery');if(cam)cam.value='';if(gal)gal.value='';const p=document.getElementById('clonePreview');if(p)p.innerHTML=''}
+async function loadImageAsset(src){
+ return await new Promise((resolve,reject)=>{const img=new Image();img.crossOrigin='anonymous';img.onload=()=>resolve(img);img.onerror=reject;img.src=src});
+}
+async function makePerfumeThumb(src,size=96){
+ if(!src)return '';
+ try{
+  const img=await loadImageAsset(src);
+  const c=document.createElement('canvas');c.width=size;c.height=size;
+  const x=c.getContext('2d',{willReadFrequently:true});
+  x.clearRect(0,0,size,size);
+  const scale=Math.min((size-8)/img.width,(size-8)/img.height);
+  const w=img.width*scale,h=img.height*scale,dx=(size-w)/2,dy=(size-h)/2;
+  x.drawImage(img,dx,dy,w,h);
+  const data=x.getImageData(0,0,size,size),d=data.data;
+  const corners=[[2,2],[size-3,2],[2,size-3],[size-3,size-3]].map(([cx,cy])=>{const i=(cy*size+cx)*4;return [d[i],d[i+1],d[i+2]]});
+  const bg=corners.reduce((acc,p)=>[acc[0]+p[0]/4,acc[1]+p[1]/4,acc[2]+p[2]/4],[0,0,0]);
+  for(let i=0;i<d.length;i+=4){
+    const dr=d[i]-bg[0],dg=d[i+1]-bg[1],dbb=d[i+2]-bg[2];
+    const dist=Math.sqrt(dr*dr+dg*dg+dbb*dbb);
+    const light=(d[i]+d[i+1]+d[i+2])/3;
+    if(dist<26 || (light>244&&dist<50)) d[i+3]=0;
+    else if(dist<52)d[i+3]=Math.min(d[i+3],Math.round((dist-26)/26*255));
+  }
+  x.putImageData(data,0,0);
+  return c.toDataURL('image/webp',.9);
+ }catch{return ''}
+}
+async function setDraftPerfumeReference(name,imageSrc){
+ const thumb=await makePerfumeThumb(imageSrc||'');
+ db.draft.sourcePerfumeName=String(name||'');
+ db.draft.sourcePerfumeImage=String(imageSrc||'');
+ db.draft.sourcePerfumeThumb=thumb||'';
+ save();
+}
 function cloneEndpoint(){return window.RUH_YASMIN_PERFUME_API||apiUrl('/api/perfume-identify')}
 async function analyzePerfumePhoto(){
  const manualName=document.getElementById('cloneName')?.value?.trim()||'';
@@ -531,7 +565,7 @@ function showCloneCandidates(items,query,archive=true){
  if(archive)saveCloneArchive({type:'search',query:String(query||''),candidates:structuredClone(cloneCandidates)});
  const box=document.getElementById('cloneResult');if(!box)return;
  let html='<div class="clone-candidate-wrap"><div class="clone-title"><span>نتائج البحث</span><h3>اختر العطر المقصود</h3><p>وجدت عدة نتائج قريبة من «'+esc(query)+'». اختر المنتج الصحيح قبل بناء التركيبة.</p></div><div class="clone-candidate-list">';
- html+=cloneCandidates.map((x,i)=>'<button class="clone-candidate" onclick="selectCloneCandidate('+i+')"><div><b>'+esc(x.product_name||'عطر')+'</b><span>'+esc(x.brand||'علامة غير محددة')+(x.concentration?' • '+esc(x.concentration):'')+(x.year?' • '+esc(x.year):'')+'</span></div><small>'+esc(x.disambiguation||x.description||'اضغط لاختيار هذا العطر')+'</small><strong>اختيار ←</strong></button>').join('');
+ html+=cloneCandidates.map((x,i)=>'<button class="clone-candidate" onclick="selectCloneCandidate('+i+')">'+(x.image_url?'<img class="clone-candidate-thumb" src="'+esc(x.image_url)+'" alt="">':'')+'<div><b>'+esc(x.product_name||'عطر')+'</b><span>'+esc(x.brand||'علامة غير محددة')+(x.concentration?' • '+esc(x.concentration):'')+(x.year?' • '+esc(x.year):'')+'</span></div><small>'+esc(x.disambiguation||x.description||'اضغط لاختيار هذا العطر')+'</small><strong>اختيار ←</strong></button>').join('');
  html+='</div></div>';box.innerHTML=html;
 }
 async function selectCloneCandidate(index){
@@ -544,17 +578,19 @@ async function selectCloneCandidate(index){
   const data=await res.json();showCloneResult(data);
  }catch(e){if(box)box.innerHTML='<div class="ai-error">تعذر جلب تفاصيل العطر المختار. حاول مرة أخرى.</div>';}
 }
+let cloneLastResult=null;
 function showCloneResult(data,archive=true){
+ cloneLastResult={...data,source_image:cloneImageData||data.image_url||''};
  const box=document.getElementById('cloneResult');if(!box)return;
  if(archive)saveCloneArchive({type:'result',query:String(data?.product_name||''),data:structuredClone(data)});
  const notes=[...(data.top_notes||[]),...(data.heart_notes||[]),...(data.base_notes||[])];
  box.innerHTML=`<div class="clone-found">
-   <div class="clone-title"><span>تم التعرف</span><h3>${esc([data.brand,data.product_name].filter(Boolean).join(' — ')||'العطر')}</h3></div>
+   <div class="clone-title">${(cloneImageData||data.image_url)?`<img class="clone-result-thumb" src="${esc(cloneImageData||data.image_url)}" alt="">`:''}<span>تم التعرف</span><h3>${esc([data.brand,data.product_name].filter(Boolean).join(' — ')||'العطر')}</h3></div>
    ${notes.length?`<div class="clone-notes">${notes.map(x=>`<span>${esc(x)}</span>`).join('')}</div>`:''}
    ${(data.accords||[]).length?`<p><b>الطابع:</b> ${esc(data.accords.join(' • '))}</p>`:''}
    <p>${esc(data.rationale||'سأحوّل النوتات المنشورة إلى تركيبة مستوحاة باستخدام مواد مختبر روح الياسمين.')}</p>
    ${Array.isArray(data.sources)&&data.sources.length?`<div class="clone-sources"><b>المصادر</b>${data.sources.slice(0,4).map(x=>`<a href="${esc(x.url||'#')}" target="_blank" rel="noopener">${esc(x.title||x.url||'مصدر')}</a>`).join('')}</div>`:''}
-   <button class="primary wide-btn" onclick='useCloneFormula(${JSON.stringify(data.clone_notes||[]).replace(/'/g,"&#39;")},${JSON.stringify(data.product_name||'نسخة مستوحاة').replace(/'/g,"&#39;")})'>أنشئ نسختي في المختبر</button>
+   <button class="primary wide-btn" onclick="useCloneLastResult()">أنشئ نسختي في المختبر</button>
  </div>`;
 }
 
@@ -588,7 +624,11 @@ function openCloneArchive(id){
 function deleteCloneArchive(id){
  db.cloneArchive=db.cloneArchive.filter(x=>x.id!==id);save();renderKeepScroll();toast('تم حذف السجل من الأرشيف');
 }
-function useCloneFormula(notes,name){
+async function useCloneLastResult(){
+ if(!cloneLastResult)return toast('لا توجد نتيجة استنساخ حالية');
+ await useCloneFormula(cloneLastResult.clone_notes||[],cloneLastResult.product_name||'نسخة مستوحاة',cloneLastResult.source_image||cloneLastResult.image_url||'');
+}
+async function useCloneFormula(notes,name,imageSrc=''){
  const valid=(Array.isArray(notes)?notes:[]).filter(n=>MATERIALS.some(m=>m.id===n.id)).map(n=>({id:n.id,pct:Number(n.pct)||0}));
  if(!valid.length){
    const fallback=buildSmartPerfume(String(name||'عطر فاخر'));
@@ -599,6 +639,7 @@ function useCloneFormula(notes,name){
    const fix=100-db.draft.notes.reduce((a,n)=>a+n.pct,0);db.draft.notes[db.draft.notes.length-1].pct=Math.round((db.draft.notes[db.draft.notes.length-1].pct+fix)*10)/10;
  }
  db.draft.name='مستوحى من '+String(name||'عطر');
+ await setDraftPerfumeReference(name,imageSrc);
  save();setRoute('lab');toast('تم إنشاء نسخة مستوحاة داخل المختبر');
 }
 
@@ -952,7 +993,7 @@ function commitBatchUsage(){
  document.getElementById('batchResult').innerHTML='<div class="inventory-success">✓ تم تسجيل تنفيذ الدفعة وتحديث كميات الزجاجات.</div>';pendingBatch=null
 }
 
-function saveFormula(){if(!db.draft.notes.length)return toast('لا توجد مواد لحفظها');if(Math.abs(totalPct()-100)>0.2)return toast('وازن النسب إلى 100% أولاً');const same=db.formulas.filter(f=>f.baseName===(db.draft.name||'تركيبة خاصة'));const v=`V${same.length+1}`;db.formulas.unshift({id:crypto.randomUUID(),baseName:db.draft.name||'تركيبة خاصة',name:db.draft.name||'تركيبة خاصة',mood:db.draft.mood,occasion:db.draft.occasion,gender:db.draft.gender,notes:structuredClone(db.draft.notes),version:v,versionNotes:document.getElementById('versionNotes')?.value||'',createdAt:new Date().toISOString(),ratings:{projection:0,longevity:0,opening:0,drydown:0}});save();setRoute('formulas');toast(`تم حفظ ${v}`)}
+function saveFormula(){if(!db.draft.notes.length)return toast('لا توجد مواد لحفظها');if(Math.abs(totalPct()-100)>0.2)return toast('وازن النسب إلى 100% أولاً');const same=db.formulas.filter(f=>f.baseName===(db.draft.name||'تركيبة خاصة'));const v=`V${same.length+1}`;db.formulas.unshift({id:crypto.randomUUID(),baseName:db.draft.name||'تركيبة خاصة',name:db.draft.name||'تركيبة خاصة',mood:db.draft.mood,occasion:db.draft.occasion,gender:db.draft.gender,notes:structuredClone(db.draft.notes),version:v,versionNotes:document.getElementById('versionNotes')?.value||'',createdAt:new Date().toISOString(),ratings:{projection:0,longevity:0,opening:0,drydown:0},sourcePerfumeName:db.draft.sourcePerfumeName||'',sourcePerfumeImage:db.draft.sourcePerfumeImage||'',sourcePerfumeThumb:db.draft.sourcePerfumeThumb||''});save();setRoute('formulas');toast(`تم حفظ ${v}`)}
 function formulaLevelPct(f,level){return (f.notes||[]).reduce((sum,n)=>sum+(MATERIALS.find(m=>m.id===n.id)?.level===level?Number(n.pct||0):0),0)}
 function formulaInventoryIssues(f){
  return (f.notes||[]).map(n=>{const m=MATERIALS.find(x=>x.id===n.id),s=db.supplies.find(x=>x.id===materialSupplyId(n.id));if(!s?.bought)return m?.name||n.id;if(stockPercent(s)<=20)return (m?.name||n.id)+' (منخفض)';return null}).filter(Boolean);
@@ -975,7 +1016,7 @@ function formulaToShopping(id){
 }
 function loadFormulaForGoal(id,goal){
  const f=db.formulas.find(x=>x.id===id);if(!f)return;
- db.draft={name:f.name,mood:f.mood,occasion:f.occasion,gender:f.gender,notes:structuredClone(f.notes)};
+ db.draft={name:f.name,mood:f.mood,occasion:f.occasion,gender:f.gender,notes:structuredClone(f.notes),sourcePerfumeName:f.sourcePerfumeName||'',sourcePerfumeImage:f.sourcePerfumeImage||'',sourcePerfumeThumb:f.sourcePerfumeThumb||''};
  if(goal==='longevity'){
   const choices=['patchouli','vetiver','amber','sandal','musk'];const id2=choices.find(x=>MATERIALS.some(m=>m.id===x));
   const n=db.draft.notes.find(x=>x.id===id2);if(n)n.pct+=4;else db.draft.notes.push({id:id2,pct:4});
@@ -985,7 +1026,7 @@ function loadFormulaForGoal(id,goal){
  }
  normalizeDraftSilent();save();modal.close();setRoute('lab');toast(goal==='longevity'?'تم تجهيز نسخة أولية لتحسين الثبات':'تم تجهيز نسخة أولية لتحسين الفوحان');
 }
-function loadFormula(id){const f=db.formulas.find(x=>x.id===id);db.draft={name:f.name,mood:f.mood,occasion:f.occasion,gender:f.gender,notes:structuredClone(f.notes)};save();modal.close();setRoute('lab')}
+function loadFormula(id){const f=db.formulas.find(x=>x.id===id);db.draft={name:f.name,mood:f.mood,occasion:f.occasion,gender:f.gender,notes:structuredClone(f.notes),sourcePerfumeName:f.sourcePerfumeName||'',sourcePerfumeImage:f.sourcePerfumeImage||'',sourcePerfumeThumb:f.sourcePerfumeThumb||''};save();modal.close();setRoute('lab')}
 function deleteFormula(id){db.formulas=db.formulas.filter(x=>x.id!==id);save();modal.close();render();toast('تم حذف التركيبة')}
 function materialInfo(id){
  const m=MATERIALS.find(x=>x.id===id);if(!m)return;
