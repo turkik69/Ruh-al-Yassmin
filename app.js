@@ -70,7 +70,8 @@ for(const def of SUPPLY_DEFAULTS){
 if(!Array.isArray(db.usageHistory))db.usageHistory=[];
 if(!db.backend)db.backend={enabled:true,url:'https://ruh-al-yassmin.vercel.app',lastStatus:'unknown'};
 if(!db.backend.url)db.backend.url='https://ruh-al-yassmin.vercel.app';
-let route='home';
+const ROUTES=['home','create','lab','materials','formulas','knowledge','favorites','profile','settings','backend','supplies','clone','assistant'];
+let route=ROUTES.includes(sessionStorage.getItem('ruhYasminRoute'))?sessionStorage.getItem('ruhYasminRoute'):'home';
 const view=document.getElementById('view');
 const modal=document.getElementById('modal');
 const modalContent=document.getElementById('modalContent');
@@ -78,7 +79,9 @@ const save=()=>localStorage.setItem(DBKEY,JSON.stringify(db));
 const esc=s=>String(s??'').replace(/[&<>'"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[m]));
 const toast=(m)=>{const t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),1800)};
 function setRoute(r){
+ if(!ROUTES.includes(r))r='home';
  route=r;
+ sessionStorage.setItem('ruhYasminRoute',route);
  document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active',b.dataset.route===r));
  render();
  window.scrollTo({top:0,behavior:'instant'});
@@ -89,12 +92,6 @@ function renderKeepScroll(){
  requestAnimationFrame(()=>window.scrollTo({top:y,behavior:'instant'}));
 }
 window.setRoute=setRoute;
-document.addEventListener('click',e=>{
- const btn=e.target.closest?.('.nav-item[data-route]');
- if(!btn)return;
- e.preventDefault();
- setRoute(btn.dataset.route);
-});
 const themeBtn=document.getElementById('themeBtn'); if(themeBtn) themeBtn.onclick=()=>{db.theme=db.theme==='light'?'dark':'light';applyTheme();save()};
 function applyTheme(){document.documentElement.classList.toggle('light',db.theme==='light')}; applyTheme();
 function home(){
@@ -540,30 +537,18 @@ if('serviceWorker' in navigator){
     try{
       const reg=await navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'});
       await reg.update();
-
-      if(reg.waiting) reg.waiting.postMessage({type:'SKIP_WAITING'});
-
+      if(reg.waiting)reg.waiting.postMessage({type:'SKIP_WAITING'});
       reg.addEventListener('updatefound',()=>{
         const worker=reg.installing;
         if(!worker)return;
         worker.addEventListener('statechange',()=>{
-          if(worker.state==='installed' && navigator.serviceWorker.controller){
+          if(worker.state==='installed'&&navigator.serviceWorker.controller){
             worker.postMessage({type:'SKIP_WAITING'});
           }
         });
       });
-
-      let reloading=false;
-      navigator.serviceWorker.addEventListener('controllerchange',()=>{
-        if(reloading)return;
-        reloading=true;
-        window.location.reload();
-      });
-
-      document.addEventListener('visibilitychange',()=>{
-        if(document.visibilityState==='visible')reg.update().catch(()=>{});
-      });
     }catch(e){}
   });
 }
+document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active',b.dataset.route===route));
 render();
