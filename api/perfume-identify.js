@@ -1,5 +1,5 @@
 
-const GEMINI_MODEL=process.env.GEMINI_MODEL||'gemini-2.5-flash-lite';
+const GEMINI_MODEL=process.env.GEMINI_MODEL||'gemini-3.5-flash-lite';
 function geminiUrl(){
   return 'https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(GEMINI_MODEL)+':generateContent';
 }
