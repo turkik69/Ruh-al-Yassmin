@@ -502,3 +502,5 @@ body{
 .mini-perfume-bottle .glass{position:relative;width:36px;height:44px;border:2px solid rgba(125,104,80,.55);border-radius:8px 8px 12px 12px;overflow:hidden;background:linear-gradient(90deg,rgba(255,255,255,.58),rgba(255,255,255,.18))}
 .mini-perfume-bottle .liquid{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(180deg,rgba(221,177,81,.45),rgba(174,118,44,.75));border-radius:5px 5px 9px 9px}
 @media(max-width:430px){.concentration-bottles{gap:5px}.conc-bottle-card{padding:8px 3px}.conc-bottle-card b{font-size:10px}.pyramid-bottle-image{width:min(88vw,340px)}}
+
+.pyramid-vector-bottle{width:min(88vw,420px);height:auto;display:block;overflow:visible}.pyramid-bottle-image-wrap{background:transparent!important}
