@@ -456,3 +456,27 @@ body{
 .home-search-result span,.home-search-result small{font-size:11px;color:var(--muted);line-height:1.5}
 .home-search-result strong{font-size:12px;color:var(--gold,#c7a45b)}
 .home-search-result:active{transform:scale(.985)}
+
+/* Smart perfume production calculator */
+.batch-smart-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.batch-guidance{display:grid;gap:10px;margin:12px 0;padding:14px;border:1px solid var(--line);border-radius:18px;background:rgba(255,255,255,.06)}
+.batch-classification{display:grid;grid-template-columns:1fr auto;gap:3px 10px;align-items:end}
+.batch-classification span{color:var(--muted);font-size:11px}
+.batch-classification b{font-size:20px}
+.batch-classification small{grid-column:2;color:var(--muted);font-size:11px}
+.batch-mix-summary{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.batch-mix-summary>div{border:1px solid var(--line);border-radius:14px;padding:10px;display:grid;gap:3px;background:rgba(255,255,255,.04)}
+.batch-mix-summary span{font-size:11px;color:var(--muted)}
+.batch-mix-summary b{font-size:22px}
+.batch-mix-summary small{font-size:12px}
+.batch-longevity{font-size:12px;line-height:1.7}
+.batch-calculation{margin-top:8px}
+.batch-table{display:grid;gap:6px}
+.batch-table>div{display:grid;grid-template-columns:1.4fr .7fr .9fr;gap:8px;align-items:center;padding:9px 10px;border-radius:12px;background:rgba(255,255,255,.04)}
+.batch-table .head{font-size:11px;color:var(--muted);background:transparent;padding-bottom:2px}
+.batch-material-breakdown{display:grid;gap:6px;margin-top:12px}
+.batch-material-breakdown>div{display:grid;grid-template-columns:1.2fr .55fr .7fr;gap:6px;align-items:center;padding:8px;border-bottom:1px solid var(--line)}
+.batch-material-breakdown small{grid-column:1/-1;color:var(--muted);font-size:10px}
+.batch-stock-line{margin:10px 0;padding:9px;border-radius:12px;background:rgba(255,255,255,.04)}
+.empty.compact{padding:14px}
+@media(max-width:520px){.batch-smart-grid{grid-template-columns:1fr}.batch-table>div{grid-template-columns:1.2fr .7fr .9fr}}
