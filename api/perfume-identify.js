@@ -27,6 +27,28 @@ function geminiSources(raw){
   }
   return out.slice(0,6);
 }
+async function callGeminiRobust(parts,{search=true,maxOutputTokens=1200,temperature=.2}={}){
+  const makeBody=(withSearch)=>({
+    contents:[{role:'user',parts}],
+    ...(withSearch?{tools:[{google_search:{}}]}:{}),
+    generationConfig:{temperature,maxOutputTokens}
+  });
+  let r=await fetch(geminiUrl(),{
+    method:'POST',
+    headers:{'x-goog-api-key':process.env.GEMINI_API_KEY,'Content-Type':'application/json'},
+    body:JSON.stringify(makeBody(search))
+  });
+  let raw=await r.json().catch(()=>({}));
+  if(!r.ok&&search){
+    r=await fetch(geminiUrl(),{
+      method:'POST',
+      headers:{'x-goog-api-key':process.env.GEMINI_API_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify(makeBody(false))
+    });
+    raw=await r.json().catch(()=>({}));
+  }
+  return {r,raw};
+}
 export default async function handler(req,res){
   res.setHeader('Access-Control-Allow-Origin','*');
   res.setHeader('Access-Control-Allow-Headers','Content-Type');
@@ -46,16 +68,7 @@ export default async function handler(req,res){
 
   if(mode==='search'&&name&&!image){
     const prompt='أنت باحث متخصص في العطور. ابحث على الويب عن جميع المنتجات المحتملة التي تطابق الاسم: "'+name+'". أعد JSON فقط بالشكل {"mode":"candidates","query":"'+name+'","candidates":[{"brand":"","product_name":"","concentration":"","year":"","disambiguation":""}]}. أعط حتى 10 نتائج حقيقية مختلفة ولا تكرر نفس المنتج، وافصل الإصدارات المختلفة.';
-    const r=await fetch(geminiUrl(),{
-      method:'POST',
-      headers:{'x-goog-api-key':process.env.GEMINI_API_KEY,'Content-Type':'application/json'},
-      body:JSON.stringify({
-        contents:[{role:'user',parts:[{text:prompt}]}],
-        tools:[{google_search:{}}],
-        generationConfig:{responseMimeType:'application/json',temperature:0.2,maxOutputTokens:1200}
-      })
-    });
-    const raw=await r.json().catch(()=>({}));
+    const {r,raw}=await callGeminiRobust([{text:prompt}],{search:true,maxOutputTokens:1200,temperature:.2});
     if(!r.ok)return res.status(r.status).json({error:'GEMINI_ERROR',details:raw?.error?.message||'Search failed',provider:'gemini'});
     try{
       const out=parseJsonText(extractGeminiText(raw));
@@ -82,16 +95,7 @@ ${selected?'هذا هو المنتج الذي اختاره المستخدم تح
 
   const parts=[{text:prompt}];
   const ip=imagePartFromDataUrl(image);if(ip)parts.push(ip);
-  const r=await fetch(geminiUrl(),{
-    method:'POST',
-    headers:{'x-goog-api-key':process.env.GEMINI_API_KEY,'Content-Type':'application/json'},
-    body:JSON.stringify({
-      contents:[{role:'user',parts}],
-      tools:[{google_search:{}}],
-      generationConfig:{responseMimeType:'application/json',temperature:0.2,maxOutputTokens:1600}
-    })
-  });
-  const raw=await r.json().catch(()=>({}));
+  const {r,raw}=await callGeminiRobust(parts,{search:true,maxOutputTokens:1600,temperature:.2});
   if(!r.ok)return res.status(r.status).json({error:'GEMINI_ERROR',details:raw?.error?.message||'Request failed',provider:'gemini'});
   try{
     const out=parseJsonText(extractGeminiText(raw));
