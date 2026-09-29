@@ -211,11 +211,13 @@ async function selectCreatePerfumeResult(index){
 }
 function draftNotesHTML(){if(!db.draft.notes.length)return '<div class="empty lux-panel tone-lilac">لم تضف مواد بعد. استخدم المساعد الذكي أو افتح المختبر لإضافة المواد.</div>';return `<div class="lux-panel tone-lilac formula-editor">${db.draft.notes.map((n,i)=>{const m=MATERIALS.find(x=>x.id===n.id);return `<div class="note-row perfume-row"><div class="material-dot">${m.icon}</div><div><strong>${m.name}</strong><small>${m.level} • ${m.family}</small></div><input type="number" min="0" max="100" value="${n.pct}" onchange="updatePct(${i},this.value)"><button onclick="removeNote(${i})">×</button></div>`}).join('')}<div class="mix-total"><div><span>إجمالي التركيبة</span><b>${totalPct()}%</b></div><div class="progress"><span style="width:${Math.min(100,totalPct())}%"></span></div></div></div>`}
 function lab(){const d=db.draft;return `${pageHero('المختبر','اخلط المواد، عدّل النسب، واحسب دفعتك بدقة','⚗','teal')}
+ ${workflowStrip('lab')}
  <div class="lab-summary">
    <section class="lux-panel tone-dark"><span class="mini-label">التركيبة الحالية</span><h3>${esc(d.name)||'تركيبة جديدة'}</h3><p>${esc(d.mood)} • ${esc(d.occasion)} • ${esc(d.gender)}</p></section>
    <section class="stat-glass"><span>مجموع التركيبة</span><b>${totalPct()}%</b></section>
    <section class="stat-glass"><span>عدد المواد</span><b>${d.notes.length}</b></section>
  </div>
+ ${labStockWarningsHTML()}
  <div class="section-title"><h3>الهرم العطري</h3><span>نسب التركيز داخل الزيت العطري</span></div>${draftNotesHTML()}
  <div class="actions premium-actions"><button class="primary" onclick="addMaterialModal()">+ إضافة مادة</button><button class="secondary" onclick="normalizeDraft()">موازنة إلى 100%</button><button class="ai-action" onclick="openAIReview()">✦ راجع التركيبة بالذكاء الاصطناعي</button></div>
  <section class="lux-panel tone-teal performance-panel">
@@ -231,11 +233,20 @@ function lab(){const d=db.draft;return `${pageHero('المختبر','اخلط ا
  <section class="lux-panel tone-gold batch-panel"><div class="panel-heading"><div><span class="mini-label">دفعات الخلط</span><h3>حساب كمية الإنتاج</h3></div><span class="panel-icon">🧪</span></div>
  <div class="grid"><div class="field"><label>حجم العبوة ml</label><input id="batchSize" type="number" value="50" min="1"></div><div class="field"><label>تركيز الزيت العطري</label><select id="conc"><option value="20">EDP 20%</option><option value="25" selected>EDP+ 25%</option><option value="30">Parfum 30%</option><option value="35">Extrait 35%</option></select></div></div><button class="ghost wide-btn" onclick="calcBatch()">احسب الكميات</button><div id="batchResult"></div></section>
  <section class="lux-panel tone-rose"><div class="panel-heading"><div><span class="mini-label">إدارة الإصدارات</span><h3>احفظ تركيبتك</h3></div><span class="panel-icon">📖</span></div><div class="field"><label>ملاحظات النسخة</label><textarea id="versionNotes" placeholder="مثال: قللت الفانيلا وزدت الصندل..."></textarea></div><button class="primary wide-btn" onclick="saveFormula()">حفظ نسخة جديدة V</button></section>`}
-function materials(){return `${pageHero('مكتبة المواد','استكشف المكونات الطبيعية والاصطناعية وتعرّف على توافقاتها','◈','lilac')}
- <section class="lux-panel tone-lilac library-search"><div class="field"><label>ابحث في مكتبة روح الياسمين</label><input id="matSearch" oninput="filterMaterials(this.value)" placeholder="اسم المادة، العائلة، أو طبقة الهرم..."></div><div class="library-count">${MATERIALS.length} مادة عطرية</div></section>
- <div id="materialList" class="material-list material-cards">${materialsHTML(MATERIALS)}</div>`}
+function materials(){
+ const level=sessionStorage.getItem('ruhMaterialLevel')||'';
+ const list=level?MATERIALS.filter(m=>m.level===level):MATERIALS;
+ setTimeout(()=>sessionStorage.removeItem('ruhMaterialLevel'),0);
+ return `${pageHero('مكتبة المواد','من المعرفة إلى الاختيار ثم المختبر — كل مادة مرتبطة بما بعدها','◈','lilac')}
+ ${workflowStrip('materials')}
+ <section class="lux-panel tone-lilac library-search"><div class="field"><label>ابحث في مكتبة روح الياسمين</label><input id="matSearch" oninput="filterMaterials(this.value)" placeholder="اسم المادة، العائلة، أو طبقة الهرم..."></div>
+ <div class="material-level-filters"><button onclick="filterMaterials('')">الكل</button><button onclick="filterMaterials('افتتاحية')">افتتاحية</button><button onclick="filterMaterials('قلب')">قلب</button><button onclick="filterMaterials('قاعدة')">قاعدة</button></div>
+ <div class="library-count">${list.length} مادة عطرية${level?' • '+level:''}</div></section>
+ <div id="materialList" class="material-list material-cards">${materialsHTML(list)}</div>`
+}
 function materialsHTML(arr){return arr.map((m,i)=>`<div class="material material-premium mat-${['pink','teal','lilac','gold'][i%4]}"><button class="material-icon material-icon-btn" onclick="materialInfo('${m.id}')" aria-label="تفاصيل ${m.name}">${m.icon}</button><div><h4>${m.name} <small>${m.en}</small></h4><p>${m.level} • ${m.family}</p><div class="material-bars"><span>قوة ${m.power}/10</span><span>ثبات ${m.life}/10</span></div></div><button onclick="materialInfo('${m.id}')">تفاصيل</button></div>`).join('')}
 function formulas(){return `${pageHero('تركيباتي','دفتر تركيباتك الخاصة وإصدارات V1 وV2 وV3','▤','gold')}
+ ${workflowStrip('formulas')}
  <section class="formula-banner"><div><span>دفتر العطور</span><b>${db.formulas.length}</b><small>تركيبة محفوظة</small></div><div class="bottle-mark">✦</div></section>
  ${db.formulas.length?`<div class="material-list formula-cards">${db.formulas.map((f,i)=>`<div class="formula-card formula-tone-${i%4}"><div class="formula-v">${esc(f.version)}</div><div class="formula-copy"><strong>${esc(f.name)}</strong><small>${esc(f.mood)} • ${esc(f.occasion)}</small><small>${new Date(f.createdAt).toLocaleDateString('ar-OM')} • ${f.notes.length} مواد</small></div><button class="formula-open" onclick="openFormula('${f.id}')">فتح</button></div>`).join('')}</div>`:'<div class="empty lux-panel tone-gold">لا توجد تركيبات محفوظة حتى الآن. ابدأ من «اصنع عطرك» ثم احفظ أول إصدار لك.</div>'}`}
 function knowledge(){return `${pageHero('المعرفة','افهم بنية العطر ثم انتقل مباشرة إلى المواد والمختبر','▤','teal')}
