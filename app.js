@@ -13,6 +13,14 @@ const MATERIALS = [
   {id:'vanilla',name:'فانيلا',en:'Vanilla',family:'حلو',level:'قاعدة',power:7,life:8,icon:'◌',pairs:['عنبر','لافندر','صندل','مسك']},
   {id:'musk',name:'مسك',en:'Musk',family:'نظيف',level:'قاعدة',power:7,life:9,icon:'◉',pairs:['ورد','ياسمين','أرز','عنبر']},
   {id:'leather',name:'جلد',en:'Leather',family:'جلدي',level:'قاعدة',power:9,life:9,icon:'▰',pairs:['زعفران','عود','عنبر','أرز']},
+  {id:'patchouli',name:'باتشولي',en:'Patchouli',family:'ترابي خشبي',level:'قاعدة',power:9,life:10,icon:'🌿',pairs:['عود','فيتيفر','عنبر','فلفل أسود']},
+  {id:'vetiver',name:'فيتيفر',en:'Vetiver',family:'خشبي ترابي',level:'قاعدة',power:8,life:9,icon:'🌾',pairs:['باتشولي','خشب الأرز','برغموت','فلفل أسود']},
+  {id:'blackpepper',name:'فلفل أسود',en:'Black Pepper',family:'سبايسي جاف',level:'قلب',power:8,life:5,icon:'✹',pairs:['فيتيفر','هيل','خشب الأرز','عود']},
+  {id:'clove',name:'قرنفل',en:'Clove',family:'سبايسي دافئ',level:'قلب',power:9,life:7,icon:'✦',pairs:['قرفة','عنبر','عود','باتشولي']},
+  {id:'cinnamon',name:'قرفة',en:'Cinnamon',family:'سبايسي دافئ',level:'قلب',power:9,life:7,icon:'≈',pairs:['قرنفل','فانيلا','عنبر','عود']},
+  {id:'cypriol',name:'سيبريول / ناغارموثا',en:'Cypriol / Nagarmotha',family:'خشبي دخاني',level:'قاعدة',power:10,life:10,icon:'◆',pairs:['عود','جلد','باتشولي','زعفران']},
+  {id:'guaiac',name:'خشب الغاياك',en:'Guaiac Wood',family:'خشبي دخاني',level:'قاعدة',power:8,life:9,icon:'🪵',pairs:['عود','عنبر','فيتيفر','جلد']},
+  {id:'frankincense',name:'لبان',en:'Frankincense',family:'راتنجي بخوري',level:'قاعدة',power:8,life:8,icon:'◈',pairs:['عود','باتشولي','عنبر','فلفل أسود']},
   {id:'neroli',name:'نيرولي',en:'Neroli',family:'زهري حمضي',level:'افتتاحية',power:5,life:4,icon:'✿',pairs:['برغموت','مسك','ياسمين','صندل']}
 ];
 const SUPPLY_DEFAULTS=[
@@ -30,7 +38,15 @@ const SUPPLY_DEFAULTS=[
  {id:'vanilla-oil',category:'زيوت ومواد عطرية',name:'فانيلا',qty:20,unit:'ml',note:'لتليين التركيبات وإضافة دفء'},
  {id:'musk-oil',category:'زيوت ومواد عطرية',name:'مسك',qty:30,unit:'ml',note:'مفيد للثبات والطابع النظيف'},
  {id:'neroli-oil',category:'زيوت ومواد عطرية',name:'نيرولي',qty:10,unit:'ml',note:'افتتاحية زهرية حمضية'},
- {id:'leather-oil',category:'زيوت ومواد عطرية',name:'جلد',qty:10,unit:'ml',note:'لمسات جلدية قوية؛ ابدأ بكمية صغيرة'},
+ {id:'leather-oil',category:'زيوت ومواد عطرية',name:'جلد',qty:10,unit:'ml',note:'Accord جلدي قوي؛ ابدأ بكمية صغيرة'},
+ {id:'patchouli-oil',category:'زيوت ومواد عطرية',name:'باتشولي',qty:30,unit:'ml',note:'زيت عطري أساسي للطابع الترابي والخشبي الداكن وثبات القاعدة'},
+ {id:'vetiver-oil',category:'زيوت ومواد عطرية',name:'فيتيفر',qty:30,unit:'ml',note:'زيت عطري خشبي جاف وترابي مناسب للعطور الخشنة'},
+ {id:'blackpepper-oil',category:'زيوت ومواد عطرية',name:'فلفل أسود',qty:20,unit:'ml',note:'زيت عطري سبايسي جاف يرفع الحيوية والفوحان'},
+ {id:'clove-oil',category:'زيوت ومواد عطرية',name:'قرنفل',qty:10,unit:'ml',note:'زيت عطري قوي جدًا ودافئ؛ يستخدم بحذر وبنسب منخفضة'},
+ {id:'cinnamon-oil',category:'زيوت ومواد عطرية',name:'قرفة',qty:10,unit:'ml',note:'مادة سبايسي قوية؛ يفضل استخدام نوع مناسب للعطور وبنسب منخفضة جدًا'},
+ {id:'cypriol-oil',category:'زيوت ومواد عطرية',name:'سيبريول / ناغارموثا',qty:20,unit:'ml',note:'زيت عطري داكن ودخاني قريب من أجواء العود والجلد'},
+ {id:'guaiac-oil',category:'زيوت ومواد عطرية',name:'خشب الغاياك',qty:20,unit:'ml',note:'خشبي دخاني دافئ ممتاز للقاعدات الداكنة'},
+ {id:'frankincense-oil',category:'زيوت ومواد عطرية',name:'لبان',qty:20,unit:'ml',note:'راتنجي بخوري يضيف عمقًا وهيبة للتركيبات الشرقية والخشبية'},
  {id:'ethanol',category:'الكحول والقاعدة',name:'كحول عطري / إيثانول مناسب للعطور',qty:1,unit:'L',note:'اختر درجة مناسبة لصناعة العطور من مورد موثوق'},
  {id:'storage-30',category:'زجاجات الحفظ',name:'زجاجات زجاجية داكنة 30 ml',qty:20,unit:'حبة',note:'لحفظ التركيبات والتجارب'},
  {id:'storage-100',category:'زجاجات الحفظ',name:'زجاجات زجاجية داكنة 100 ml',qty:10,unit:'حبة',note:'للدفعات الأكبر'},
@@ -330,9 +346,13 @@ function buildSmartPerfume(text){
  let weights=[18,12,14,18,18,20];
  let mood='نظيف',name='ردهة فاخرة',occasion=db.draft.occasion||'مسائي';
  let rationale='تركيبة متوازنة تبدأ بانتعاش حمضي ناعم، ثم قلب عطري نظيف، وتنتهي بقاعدة خشبية مسكية ثابتة.';
- if(/عود|شرقي|زعفران|عنبر|دخاني|بخور/.test(lower)){
-   ids=['bergamot','cardamom','saffron','oud','amber','musk'];weights=[10,12,10,25,23,20];
-   mood='شرقي';name='ليل العنبر';rationale='بناء شرقي غني يعتمد على العود والعنبر مع زعفران وهيل لتخفيف ثقل القاعدة وإعطائها عمقًا وفوحانًا.';
+ if(/باتشولي|خشن|سبايسي|spicy|ترابي|فيتيفر|فلفل|دخاني|ناغارموثا|سيبريول/.test(lower)){
+   ids=['blackpepper','cardamom','patchouli','vetiver','cypriol','oud','frankincense'];
+   weights=[10,10,18,16,14,18,14];
+   mood='خشبي سبايسي';name='خشب داكن';rationale='تركيبة خشنة وسبايسي بطابع ترابي ودخاني، يقودها الباتشولي والفيتيفر والسيبريول مع عود ولبان وفلفل أسود.';
+ }else if(/عود|شرقي|زعفران|عنبر|بخور/.test(lower)){
+   ids=['blackpepper','saffron','patchouli','oud','amber','frankincense'];weights=[10,10,18,24,20,18];
+   mood='شرقي';name='ليل العنبر';rationale='بناء شرقي داكن يعتمد على العود والباتشولي والعنبر مع لبان ولمسة سبايسي لزيادة العمق والحضور.';
  }else if(/ياسمين|ورد|زهري|زهور/.test(lower)){
    ids=['bergamot','neroli','jasmine','rose','sandal','musk'];weights=[15,12,25,16,15,17];
    mood='زهري';name='ياسمين أبيض';rationale='قلب زهري واضح تقوده الياسمين والورد، مع افتتاحية نيرولي وبرغموت وقاعدة صندل ومسك للحفاظ على النعومة والثبات.';
@@ -367,24 +387,6 @@ function generateLocalAI(text,openLab=false){
  toast('تم إنشاء تركيبة أولية');
  if(openLab)setRoute('lab'); else render();
 }
-function generateLocalAI(text,openLab=false){
- const lower=String(text||'').toLowerCase();
- let ids=['bergamot','neroli','lavender','cedar','sandal','musk'];
- let weights=[16,14,16,18,18,18];
- let mood='فاخر',name='تركيبة ذكية';
- if(/عود|شرقي|زعفران|عنبر/.test(lower)){ids=['bergamot','cardamom','saffron','oud','amber','musk'];weights=[12,12,10,24,22,20];mood='شرقي';name='ليل شرقي'}
- else if(/ياسمين|ورد|زهري/.test(lower)){ids=['bergamot','neroli','jasmine','rose','sandal','musk'];weights=[16,12,24,16,16,16];mood='زهري';name='ياسمين أبيض'}
- else if(/جلد|جلدي/.test(lower)){ids=['bergamot','cardamom','saffron','leather','oud','amber'];weights=[14,12,10,20,22,22];mood='جلدي';name='جلد وعنبر'}
- else if(/حلو|فانيلا/.test(lower)){ids=['bergamot','lavender','vanilla','amber','sandal','musk'];weights=[14,12,20,20,16,18];mood='حلو';name='دفء الفانيلا'}
- else if(/نظيف|فندق|مسك|خشبي/.test(lower)){ids=['bergamot','neroli','lavender','cedar','sandal','musk'];weights=[18,12,14,18,18,20];mood='نظيف';name='ردهة فاخرة'}
- db.draft.notes=ids.map((id,i)=>({id,pct:weights[i]}));
- if(!db.draft.name)db.draft.name=name;
- db.draft.mood=mood;
- save();
- toast('تم إنشاء تركيبة أولية وفتحها في المختبر');
- if(openLab)setRoute('lab'); else render();
-}
-
 function askAIFromCreate(){const idea=document.getElementById('idea')?.value?.trim();db.draft.name=document.getElementById('fName')?.value||db.draft.name;db.draft.mood=document.getElementById('fMood')?.value||db.draft.mood;db.draft.occasion=document.getElementById('fOcc')?.value||db.draft.occasion;save();setRoute('assistant');if(idea)setTimeout(()=>{const p=document.getElementById('aiPrompt');if(p)p.value=idea;askPerfumeAI(idea)},30)}
 function openAIReview(){const d=`راجع هذه التركيبة الحالية وطورها مع الحفاظ على فكرتها: ${db.draft.name||'بدون اسم'}، الطابع ${db.draft.mood}، الاستخدام ${db.draft.occasion}. المواد الحالية: ${db.draft.notes.map(n=>{const m=MATERIALS.find(x=>x.id===n.id);return m.name+' '+n.pct+'%'}).join('، ')}. أعطني نسخة أكثر توازنًا وثباتًا من نفس مواد المكتبة.`;setRoute('assistant');setTimeout(()=>{const p=document.getElementById('aiPrompt');if(p)p.value=d},30)}
 function render(){view.innerHTML=({home,create,lab,materials,formulas,knowledge,favorites,profile,settings,backend:backendPage,supplies,clone:clonePerfume,assistant}[route]||home)();bindDraftInputs()}
@@ -426,7 +428,7 @@ function analyzePerformance(){
  }
  if(longevity>=8){
    const strength=longevity>=12?5:longevity>=10?4:2;
-   const fixes=['musk','sandal','amber'];
+   const fixes=(db.draft.mood||'').includes('خشبي')||db.draft.notes.some(n=>['oud','patchouli','vetiver','cypriol'].includes(n.id))?['patchouli','vetiver','amber']:['musk','sandal','amber'];
    for(const id of fixes.slice(0,longevity>=10?3:2)){
      if(has(id))bump(id,strength,id==='musk'?'دعم الأثر والثبات':id==='sandal'?'تثبيت القاعدة وتنعيمها':'زيادة عمق القاعدة');
      else add.push({id,pct:strength,reason:'مادة قاعدة مناسبة لرفع الثبات'});
