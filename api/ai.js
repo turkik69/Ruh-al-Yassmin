@@ -1,6 +1,6 @@
 const MATERIAL_IDS=['bergamot','lemon','lavender','rose','jasmine','cardamom','saffron','cedar','sandal','oud','amber','vanilla','musk','leather','neroli','patchouli','vetiver','blackpepper','clove','cinnamon','cypriol','guaiac','frankincense'];
 
-const GEMINI_MODEL=process.env.GEMINI_MODEL||'gemini-2.5-flash-lite';
+const GEMINI_MODEL=process.env.GEMINI_MODEL||'gemini-3.5-flash-lite';
 function geminiUrl(){
   return 'https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(GEMINI_MODEL)+':generateContent';
 }
