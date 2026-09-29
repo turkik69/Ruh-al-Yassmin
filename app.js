@@ -604,7 +604,7 @@ function generateLocalAI(text,openLab=false){
 }
 function askAIFromCreate(){const idea=document.getElementById('idea')?.value?.trim();db.draft.name=document.getElementById('fName')?.value||db.draft.name;db.draft.mood=document.getElementById('fMood')?.value||db.draft.mood;db.draft.occasion=document.getElementById('fOcc')?.value||db.draft.occasion;save();setRoute('assistant');if(idea)setTimeout(()=>{const p=document.getElementById('aiPrompt');if(p)p.value=idea;askPerfumeAI(idea)},30)}
 function openAIReview(){const d=`راجع هذه التركيبة الحالية وطورها مع الحفاظ على فكرتها: ${db.draft.name||'بدون اسم'}، الطابع ${db.draft.mood}، الاستخدام ${db.draft.occasion}. المواد الحالية: ${db.draft.notes.map(n=>{const m=MATERIALS.find(x=>x.id===n.id);return m.name+' '+n.pct+'%'}).join('، ')}. أعطني نسخة أكثر توازنًا وثباتًا من نفس مواد المكتبة.`;setRoute('assistant');setTimeout(()=>{const p=document.getElementById('aiPrompt');if(p)p.value=d},30)}
-function render(){view.innerHTML=({home,create,lab,materials,formulas,knowledge,favorites,profile,settings,backend:backendPage,supplies,clone:clonePerfume,assistant}[route]||home)();bindDraftInputs()}
+function render(){view.innerHTML=({home,create,lab,materials,formulas,knowledge,pyramid,favorites,profile,settings,backend:backendPage,supplies,clone:clonePerfume,assistant}[route]||home)();bindDraftInputs()}
 function bindDraftInputs(){['fName','fMood','fOcc'].forEach(id=>{const e=document.getElementById(id);if(!e)return;e.onchange=()=>{if(id==='fName')db.draft.name=e.value;if(id==='fMood')db.draft.mood=e.value;if(id==='fOcc')db.draft.occasion=e.value;save()}})}
 function totalPct(){return Math.round(db.draft.notes.reduce((a,n)=>a+Number(n.pct||0),0)*10)/10}
 function updatePct(i,v){db.draft.notes[i].pct=Math.max(0,Number(v)||0);save();render()}
@@ -721,7 +721,38 @@ function commitBatchUsage(){
 }
 
 function saveFormula(){if(!db.draft.notes.length)return toast('لا توجد مواد لحفظها');if(Math.abs(totalPct()-100)>0.2)return toast('وازن النسب إلى 100% أولاً');const same=db.formulas.filter(f=>f.baseName===(db.draft.name||'تركيبة خاصة'));const v=`V${same.length+1}`;db.formulas.unshift({id:crypto.randomUUID(),baseName:db.draft.name||'تركيبة خاصة',name:db.draft.name||'تركيبة خاصة',mood:db.draft.mood,occasion:db.draft.occasion,gender:db.draft.gender,notes:structuredClone(db.draft.notes),version:v,versionNotes:document.getElementById('versionNotes')?.value||'',createdAt:new Date().toISOString(),ratings:{projection:0,longevity:0,opening:0,drydown:0}});save();setRoute('formulas');toast(`تم حفظ ${v}`)}
-function openFormula(id){const f=db.formulas.find(x=>x.id===id);if(!f)return;modalContent.innerHTML=`<h3>${esc(f.name)} — ${f.version}</h3><p style="color:var(--muted)">${esc(f.mood)} • ${esc(f.occasion)} • ${esc(f.gender)}</p>${f.notes.map(n=>{const m=MATERIALS.find(x=>x.id===n.id);return `<div class="note-row"><div><strong>${m.name}</strong><small style="display:block;color:var(--muted)">${m.level}</small></div><b>${n.pct}%</b><span></span></div>`}).join('')}<hr style="border:0;border-top:1px solid var(--line)"><p>${esc(f.versionNotes)||'لا توجد ملاحظات.'}</p><div class="actions"><button class="secondary" onclick="loadFormula('${f.id}')">استخدم كأساس لنسخة جديدة</button><button class="danger" onclick="deleteFormula('${f.id}')">حذف</button><button class="ghost" onclick="modal.close()">إغلاق</button></div>`;modal.showModal()}
+function formulaLevelPct(f,level){return (f.notes||[]).reduce((sum,n)=>sum+(MATERIALS.find(m=>m.id===n.id)?.level===level?Number(n.pct||0):0),0)}
+function formulaInventoryIssues(f){
+ return (f.notes||[]).map(n=>{const m=MATERIALS.find(x=>x.id===n.id),s=db.supplies.find(x=>x.id===materialSupplyId(n.id));if(!s?.bought)return m?.name||n.id;if(stockPercent(s)<=20)return (m?.name||n.id)+' (منخفض)';return null}).filter(Boolean);
+}
+function openFormula(id){
+ const f=db.formulas.find(x=>x.id===id);if(!f)return;
+ const top=formulaLevelPct(f,'افتتاحية'),heart=formulaLevelPct(f,'قلب'),base=formulaLevelPct(f,'قاعدة'),issues=formulaInventoryIssues(f);
+ modalContent.innerHTML='<h3>'+esc(f.name)+' — '+esc(f.version||'')+'</h3><p style="color:var(--muted)">'+esc(f.mood)+' • '+esc(f.occasion)+' • '+esc(f.gender)+'</p>'+
+ '<div class="formula-pyramid-mini"><span class="top" style="--w:'+top+'%">افتتاحية <b>'+top.toFixed(0)+'%</b></span><span class="heart" style="--w:'+heart+'%">قلب <b>'+heart.toFixed(0)+'%</b></span><span class="base" style="--w:'+base+'%">قاعدة <b>'+base.toFixed(0)+'%</b></span></div>'+
+ f.notes.map(n=>{const m=MATERIALS.find(x=>x.id===n.id);return '<div class="note-row"><div><strong>'+esc(m?.name||n.id)+'</strong><small style="display:block;color:var(--muted)">'+esc(m?.level||'')+'</small></div><b>'+n.pct+'%</b><span></span></div>'}).join('')+
+ '<div class="formula-inventory '+(issues.length?'warn':'ok')+'">'+(issues.length?'<b>يحتاج تجهيز:</b> '+esc(issues.join('، ')):'✓ مواد التركيبة متوفرة في المخزون')+'</div>'+
+ '<p>'+esc(f.versionNotes||'لا توجد ملاحظات.')+'</p>'+
+ '<div class="actions"><button class="primary" onclick="loadFormula(\''+f.id+'\')">افتح للتعديل</button><button class="secondary" onclick="loadFormulaForGoal(\''+f.id+'\',\'longevity\')">حسّن الثبات</button><button class="secondary" onclick="loadFormulaForGoal(\''+f.id+'\',\'projection\')">حسّن الفوحان</button>'+(issues.length?'<button class="ghost" onclick="formulaToShopping(\''+f.id+'\')">أرسل النواقص للتجهيز</button>':'')+'<button class="danger" onclick="deleteFormula(\''+f.id+'\')">حذف</button><button class="ghost" onclick="modal.close()">إغلاق</button></div>';
+ modal.showModal();
+}
+function formulaToShopping(id){
+ const f=db.formulas.find(x=>x.id===id);if(!f)return;
+ (f.notes||[]).forEach(n=>{const s=db.supplies.find(x=>x.id===materialSupplyId(n.id));if(!s?.bought||stockPercent(s)<=20){if(!db.shoppingList.includes(n.id))db.shoppingList.push(n.id)}});
+ save();modal.close();setRoute('supplies');toast('تم إرسال النواقص إلى تجهيز مختبري');
+}
+function loadFormulaForGoal(id,goal){
+ const f=db.formulas.find(x=>x.id===id);if(!f)return;
+ db.draft={name:f.name,mood:f.mood,occasion:f.occasion,gender:f.gender,notes:structuredClone(f.notes)};
+ if(goal==='longevity'){
+  const choices=['patchouli','vetiver','amber','sandal','musk'];const id2=choices.find(x=>MATERIALS.some(m=>m.id===x));
+  const n=db.draft.notes.find(x=>x.id===id2);if(n)n.pct+=4;else db.draft.notes.push({id:id2,pct:4});
+ }else{
+  const id2=db.draft.notes.some(x=>x.id==='blackpepper')?'blackpepper':'bergamot';
+  const n=db.draft.notes.find(x=>x.id===id2);if(n)n.pct+=3;else db.draft.notes.push({id:id2,pct:3});
+ }
+ normalizeDraftSilent();save();modal.close();setRoute('lab');toast(goal==='longevity'?'تم تجهيز نسخة أولية لتحسين الثبات':'تم تجهيز نسخة أولية لتحسين الفوحان');
+}
 function loadFormula(id){const f=db.formulas.find(x=>x.id===id);db.draft={name:f.name,mood:f.mood,occasion:f.occasion,gender:f.gender,notes:structuredClone(f.notes)};save();modal.close();setRoute('lab')}
 function deleteFormula(id){db.formulas=db.formulas.filter(x=>x.id!==id);save();modal.close();render();toast('تم حذف التركيبة')}
 function materialInfo(id){
