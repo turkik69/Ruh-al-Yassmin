@@ -18,7 +18,7 @@ export default async function handler(req,res){
       body:JSON.stringify({
         model,
         input:'Reply with exactly: OK',
-        max_output_tokens:16
+        max_output_tokens:32
       })
     });
 
