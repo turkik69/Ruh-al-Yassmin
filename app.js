@@ -787,7 +787,7 @@ function batchGuidanceHTML(size,conc,oil,carrier,cls,projection){
 }
 function calcBatch(){
  const size=Number(document.getElementById('batchSize')?.value||50),conc=Number(document.getElementById('conc')?.value||20),projection=document.getElementById('batchProjection')?.value||'medium';
- const oil=size*conc/100,carrier=size-oil,cls=classByConcentration(conc);
+ const oil=size*conc/100,carrier=size-oil,selected=classById(document.getElementById('batchClass')?.value),cls=(conc>=selected.min&&conc<=selected.max)?selected:classByConcentration(conc);
  const items=db.draft.notes.map(n=>{const m=MATERIALS.find(x=>x.id===n.id);return {id:n.id,name:m?.name||n.id,ml:oil*(Number(n.pct||0)/100),pct:Number(n.pct||0)}});
  pendingBatch={size,conc,oil,carrier,items,name:db.draft.name||'دفعة عطر',classId:cls.id,projection};
  const guide=document.getElementById('batchGuidance');if(guide)guide.innerHTML=batchGuidanceHTML(size,conc,oil,carrier,cls,projection);
