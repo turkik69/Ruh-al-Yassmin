@@ -198,7 +198,7 @@ async function searchPerfumeFromHome(){
   saveCloneArchive({type:'search',query:q,candidates:structuredClone(homeSearchCandidates)});
   if(!homeSearchCandidates.length){if(box)box.innerHTML='<div class="empty">لم أجد نتائج واضحة. جرّب كتابة العلامة التجارية مع اسم العطر.</div>';return}
   if(box)box.innerHTML='<div class="home-search-results">'+homeSearchCandidates.map((x,i)=>'<button class="home-search-result" onclick="selectHomePerfumeResult('+i+')"><div><b>'+esc(x.product_name||'عطر')+'</b><span>'+esc(x.brand||'علامة غير محددة')+(x.concentration?' • '+esc(x.concentration):'')+(x.year?' • '+esc(x.year):'')+'</span></div><small>'+esc(x.disambiguation||'اضغط لاختيار هذا الإصدار')+'</small><strong>اختيار ←</strong></button>').join('')+'</div>';
- }catch(e){if(box)box.innerHTML='<div class="ai-error">تعذر البحث الآن. تحقق من Backend وOpenAI ثم حاول مرة أخرى.</div>'}
+ }catch(e){if(box)box.innerHTML='<div class="ai-error">تعذر البحث الآن. تحقق من Backend وGemini ثم حاول مرة أخرى.</div>'}
 }
 async function selectHomePerfumeResult(index){
  const item=homeSearchCandidates[index];if(!item)return;
@@ -521,7 +521,7 @@ async function analyzePerfumePhoto(){
    if(data.mode==='candidates'&&Array.isArray(data.candidates)&&data.candidates.length)showCloneCandidates(data.candidates,manualName);
    else showCloneResult(data);
  }catch(e){
-   if(box)box.innerHTML='<div class="ai-error">تعذر البحث السحابي الآن. تحقق من Backend وOpenAI ثم حاول مرة أخرى.</div>';
+   if(box)box.innerHTML='<div class="ai-error">تعذر البحث السحابي الآن. تحقق من Backend وGemini ثم حاول مرة أخرى.</div>';
  }finally{if(btn){btn.disabled=false;btn.textContent='✦ تعرّف على العطر وابحث عن مكوناته'}}
 }
 function showCloneCandidates(items,query,archive=true){
