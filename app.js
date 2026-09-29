@@ -535,20 +535,13 @@ function filterMaterials(q){q=q.trim().toLowerCase();const a=MATERIALS.filter(m=
 if('serviceWorker' in navigator){
   window.addEventListener('load',async()=>{
     try{
-      const reg=await navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'});
-      await reg.update();
-      if(reg.waiting)reg.waiting.postMessage({type:'SKIP_WAITING'});
-      reg.addEventListener('updatefound',()=>{
-        const worker=reg.installing;
-        if(!worker)return;
-        worker.addEventListener('statechange',()=>{
-          if(worker.state==='installed'&&navigator.serviceWorker.controller){
-            worker.postMessage({type:'SKIP_WAITING'});
-          }
-        });
-      });
+      const regs=await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r=>r.unregister()));
+      if('caches' in window){
+        const keys=await caches.keys();
+        await Promise.all(keys.filter(k=>k.startsWith('ruh-yasmin-')).map(k=>caches.delete(k)));
+      }
     }catch(e){}
   });
 }
-document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active',b.dataset.route===route));
 render();
