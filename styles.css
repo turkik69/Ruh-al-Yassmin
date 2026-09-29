@@ -334,3 +334,74 @@ html,body{background:linear-gradient(180deg,#f8f2e9 0%,#f4e8dc 100%)}
 .profile-formula-item small{font-size:11px;color:var(--muted)}
 .profile-formula-item strong{font-size:12px;color:var(--gold,#c7a45b);white-space:nowrap}
 .profile-formulas-card:active,.profile-formula-item:active{transform:scale(.985)}
+
+/* Integrated fragrance workflow */
+.workflow-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:0 0 14px}
+.workflow-strip button{border:1px solid var(--line);background:rgba(255,255,255,.045);color:var(--muted);border-radius:14px;padding:8px 4px;display:grid;place-items:center;gap:3px;font-size:10px}
+.workflow-strip button span{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.08);font-weight:800}
+.workflow-strip button b{font-size:9px;white-space:nowrap}
+.workflow-strip button.active{background:rgba(201,164,91,.16);color:var(--text);border-color:rgba(201,164,91,.35)}
+.knowledge-card strong{display:block;margin-top:10px;font-size:12px;color:var(--gold,#a77a2c)}
+.perfume-bottle-wrap{min-height:420px;display:grid;justify-items:center;align-content:center}
+.perfume-bottle-cap{width:96px;height:32px;border-radius:12px 12px 5px 5px;background:linear-gradient(180deg,#e8d7b0,#9b7a43);box-shadow:0 8px 18px rgba(0,0,0,.16)}
+.perfume-bottle-neck{width:66px;height:34px;background:linear-gradient(90deg,rgba(255,255,255,.6),rgba(229,219,205,.35));border:1px solid rgba(255,255,255,.55)}
+.perfume-bottle{width:min(86vw,330px);height:360px;border-radius:48px 48px 64px 64px;border:2px solid rgba(255,255,255,.65);overflow:hidden;display:grid;grid-template-rows:28% 34% 38%;box-shadow:inset 0 0 42px rgba(255,255,255,.32),0 24px 50px rgba(95,64,31,.16)}
+.bottle-layer{border:0;color:#2c2430;padding:16px 22px;display:flex;align-items:center;gap:15px;text-align:right}
+.bottle-layer span{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.5);font-weight:800}
+.bottle-layer div{display:grid;gap:4px}
+.bottle-layer b{font-size:22px}
+.bottle-layer small{font-size:12px;opacity:.7}
+.bottle-top{background:linear-gradient(135deg,rgba(255,222,126,.88),rgba(255,244,205,.88))}
+.bottle-heart{background:linear-gradient(135deg,rgba(227,170,202,.86),rgba(218,196,245,.9))}
+.bottle-base{background:linear-gradient(135deg,rgba(172,126,84,.92),rgba(110,76,68,.92));color:#fff}
+.pyramid-learning{display:grid;gap:18px}
+.pyramid-explain{display:grid;gap:10px}
+.pyramid-explain h3,.pyramid-explain p{margin:0}
+.pyramid-ratio-guide{display:grid;gap:8px}
+.pyramid-ratio-guide span{display:flex;align-items:center;gap:8px}
+.pyramid-ratio-guide i{width:12px;height:12px;border-radius:50%}
+.pyramid-ratio-guide i.top{background:#e9c35f}
+.pyramid-ratio-guide i.heart{background:#d994bd}
+.pyramid-ratio-guide i.base{background:#7d5545}
+.knowledge-next{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.knowledge-next button{border:1px solid var(--line);background:rgba(255,255,255,.05);color:inherit;border-radius:14px;padding:12px 6px;font-size:11px}
+.pyramid-modal-points{display:grid;gap:7px;margin:10px 0}
+.pyramid-modal-materials{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:12px 0}
+.pyramid-modal-materials button{border:1px solid var(--line);background:rgba(255,255,255,.05);color:inherit;border-radius:14px;padding:10px;display:grid;gap:3px;text-align:right}
+.pyramid-modal-materials span{font-size:22px}
+.pyramid-modal-materials small{color:var(--muted)}
+.material-level-filters{display:flex;gap:6px;flex-wrap:wrap}
+.material-level-filters button{border:1px solid var(--line);background:rgba(255,255,255,.05);color:inherit;border-radius:999px;padding:7px 11px;font-size:11px}
+.material-detail-head{display:flex;align-items:center;gap:12px}
+.material-detail-head>span{font-size:38px}
+.material-detail-head h3,.material-detail-head p{margin:0}
+.material-link-status{display:grid;grid-template-columns:1fr auto;gap:8px;padding:12px;border-radius:14px;background:rgba(255,255,255,.05);margin:12px 0}
+.material-link-status span{color:var(--muted);font-size:12px}
+.material-used-formulas{display:flex;gap:6px;overflow:auto;padding-bottom:4px}
+.material-used-formulas button{white-space:nowrap;border:1px solid var(--line);background:transparent;color:inherit;border-radius:999px;padding:7px 10px;font-size:11px}
+.lab-stock-warnings,.lab-stock-ok{margin:12px 0;border-radius:18px;padding:13px}
+.lab-stock-ok{background:rgba(76,175,120,.12);border:1px solid rgba(76,175,120,.25);font-size:12px}
+.lab-stock-warnings{display:grid;gap:8px;background:rgba(210,137,62,.08);border:1px solid rgba(210,137,62,.2)}
+.lab-stock-warnings>div{display:grid;gap:2px}
+.lab-stock-warnings>div small{color:var(--muted)}
+.lab-stock-warnings button{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;border:1px solid var(--line);background:rgba(255,255,255,.04);color:inherit;border-radius:14px;padding:9px;text-align:right}
+.lab-stock-warnings button>span{width:28px;height:28px;border-radius:50%;display:grid;place-items:center}
+.lab-stock-warnings .missing{background:rgba(205,82,82,.18)}
+.lab-stock-warnings .low{background:rgba(226,177,65,.18)}
+.lab-stock-warnings small{display:block;color:var(--muted)}
+.lab-stock-warnings strong{font-size:11px;color:var(--gold,#c7a45b)}
+.shopping-needed-list{display:grid;gap:8px}
+.shopping-needed-list>div{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:9px;border:1px solid var(--line);border-radius:13px}
+.shopping-needed-list small{display:block;color:var(--muted)}
+.shopping-needed-list button{border:0;background:transparent;color:var(--muted);font-size:20px}
+.formula-pyramid-mini{display:grid;gap:6px;margin:12px 0}
+.formula-pyramid-mini span{position:relative;overflow:hidden;border-radius:10px;padding:8px 10px;background:rgba(255,255,255,.05);display:flex;justify-content:space-between}
+.formula-pyramid-mini span:before{content:"";position:absolute;inset:0 auto 0 0;width:var(--w);opacity:.18}
+.formula-pyramid-mini .top:before{background:#e9c35f}
+.formula-pyramid-mini .heart:before{background:#d994bd}
+.formula-pyramid-mini .base:before{background:#7d5545}
+.formula-pyramid-mini b,.formula-pyramid-mini span{z-index:1}
+.formula-inventory{border-radius:12px;padding:10px;margin:10px 0;font-size:12px}
+.formula-inventory.ok{background:rgba(76,175,120,.12)}
+.formula-inventory.warn{background:rgba(210,137,62,.12)}
+@media(min-width:700px){.pyramid-learning{grid-template-columns:1fr 1fr;align-items:center}}
