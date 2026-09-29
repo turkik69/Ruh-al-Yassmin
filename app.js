@@ -611,8 +611,8 @@ async function askPerfumeAI(customPrompt){
      }
      let detail='';
      try{const err=await res.json();detail=err?.details||err?.error||''}catch(_){}
-     db.backend.lastStatus='offline';save();
-     if(box&&detail)box.innerHTML=`<div class="ai-error">الخادم متصل لكن OpenAI رفض الطلب: ${esc(detail)}</div>`;
+     db.backend.lastStatus='online';save();
+     if(box&&detail)box.innerHTML=`<div class="ai-error">الخادم متصل، لكن OpenAI رفض الطلب: ${esc(detail)}</div>`;
    }catch(e){db.backend.lastStatus='offline';save()}
  }
 
