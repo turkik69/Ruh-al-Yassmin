@@ -23,7 +23,8 @@ export default async function handler(req,res){
       input:[
         {role:'system',content:instructions},
         {role:'user',content:JSON.stringify({request:prompt,context})}
-      ]
+      ],
+      max_output_tokens:1200
     })
   });
   const raw=await r.json();
@@ -41,7 +42,8 @@ export default async function handler(req,res){
 
   try{
     const clean=text.replace(/^\`\`\`json\s*/i,'').replace(/\`\`\`$/,'').trim();
-    const out=JSON.parse(clean);
+    const first=clean.indexOf('{'),last=clean.lastIndexOf('}');
+    const out=JSON.parse(first>=0&&last>first?clean.slice(first,last+1):clean);
     out.notes=(out.notes||[]).filter(n=>MATERIAL_IDS.includes(n.id)).map(n=>({id:n.id,pct:Number(n.pct)||0}));
     return res.status(200).json(out);
   }catch{
