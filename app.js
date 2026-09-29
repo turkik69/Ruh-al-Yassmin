@@ -673,7 +673,7 @@ function generateLocalAI(text,openLab=false){
 function askAIFromCreate(){const idea=document.getElementById('idea')?.value?.trim();db.draft.name=document.getElementById('fName')?.value||db.draft.name;db.draft.mood=document.getElementById('fMood')?.value||db.draft.mood;db.draft.occasion=document.getElementById('fOcc')?.value||db.draft.occasion;save();setRoute('assistant');if(idea)setTimeout(()=>{const p=document.getElementById('aiPrompt');if(p)p.value=idea;askPerfumeAI(idea)},30)}
 function openAIReview(){const d=`راجع هذه التركيبة الحالية وطورها مع الحفاظ على فكرتها: ${db.draft.name||'بدون اسم'}، الطابع ${db.draft.mood}، الاستخدام ${db.draft.occasion}. المواد الحالية: ${db.draft.notes.map(n=>{const m=MATERIALS.find(x=>x.id===n.id);return m.name+' '+n.pct+'%'}).join('، ')}. أعطني نسخة أكثر توازنًا وثباتًا من نفس مواد المكتبة.`;setRoute('assistant');setTimeout(()=>{const p=document.getElementById('aiPrompt');if(p)p.value=d},30)}
 function render(){view.innerHTML=({home,create,lab,materials,formulas,knowledge,pyramid,favorites,profile,settings,backend:backendPage,supplies,clone:clonePerfume,assistant}[route]||home)();bindDraftInputs()}
-function bindDraftInputs(){['fName','fMood','fOcc'].forEach(id=>{const e=document.getElementById(id);if(!e)return;e.onchange=()=>{if(id==='fName')db.draft.name=e.value;if(id==='fMood')db.draft.mood=e.value;if(id==='fOcc')db.draft.occasion=e.value;save()}})}
+function bindDraftInputs(){['fName','fMood','fOcc'].forEach(id=>{const e=document.getElementById(id);if(!e)return;e.onchange=()=>{if(id==='fName')db.draft.name=e.value;if(id==='fMood')db.draft.mood=e.value;if(id==='fOcc')db.draft.occasion=e.value;save()}});if(route==='lab')requestAnimationFrame(()=>calcBatch())}
 function totalPct(){return Math.round(db.draft.notes.reduce((a,n)=>a+Number(n.pct||0),0)*10)/10}
 function updatePct(i,v){db.draft.notes[i].pct=Math.max(0,Number(v)||0);save();render()}
 function removeNote(i){db.draft.notes.splice(i,1);save();render()}
@@ -754,15 +754,49 @@ function applyPerformancePlan(){
 
 let pendingBatch=null;
 function materialSupplyId(materialId){return materialId+'-oil'}
+function classById(id){return PERFUME_CLASSES.find(x=>x.id===id)||PERFUME_CLASSES[1]}
+function classByConcentration(c){c=Number(c);if(c>=25)return PERFUME_CLASSES[0];if(c>=15)return PERFUME_CLASSES[1];if(c>=8)return PERFUME_CLASSES[2];return PERFUME_CLASSES[3]}
+function classByLongevity(hours){hours=Number(hours);if(hours>=9)return PERFUME_CLASSES[0];if(hours>=6)return PERFUME_CLASSES[1];if(hours>=4)return PERFUME_CLASSES[2];return PERFUME_CLASSES[3]}
+function nearestConc(v){const x=[5,8,10,12,15,18,20,22,25,30,35,40];return x.reduce((p,n)=>Math.abs(n-v)<Math.abs(p-v)?n:p,x[0])}
+function targetConcForLongevity(cls,hours){const spanH=Math.max(.1,cls.hMax-cls.hMin),spanC=cls.max-cls.min,pos=Math.max(0,Math.min(1,(Number(hours)-cls.hMin)/spanH));return nearestConc(cls.min+spanC*pos)}
+function setSelectValue(id,value){const el=document.getElementById(id);if(el)el.value=String(value)}
+function batchProjectionAdvice(v){
+ if(v==='very-strong')return 'فوحان قوي جدًا: عدّل بنية الخلاصة نفسها وارفع حضور الافتتاحية والقلب؛ زيادة التركيز وحدها لا تضمن فوحانًا أعلى.';
+ if(v==='strong')return 'فوحان قوي: حافظ على افتتاحية واضحة وقلب حاضر مع قاعدة ثابتة.';
+ if(v==='soft')return 'فوحان ناعم: خفف الافتتاحيات الحادة وامنح القاعدة حضورًا أكبر.';
+ return 'فوحان متوازن: مناسب للاستخدام العام مع توازن بين طبقات الهرم.';
+}
+function syncBatchFromClass(){
+ const cls=classById(document.getElementById('batchClass')?.value);
+ setSelectValue('conc',cls.rec);
+ setSelectValue('batchLongevity',cls.id==='perfume'?12:cls.id==='edp'?8:cls.id==='edt'?5:3);
+ calcBatch();
+}
+function syncBatchFromLongevity(){
+ const h=Number(document.getElementById('batchLongevity')?.value||8),cls=classByLongevity(h);
+ setSelectValue('batchClass',cls.id);setSelectValue('conc',targetConcForLongevity(cls,h));calcBatch();
+}
+function syncBatchFromConcentration(){
+ const c=Number(document.getElementById('conc')?.value||20),cls=classByConcentration(c);
+ setSelectValue('batchClass',cls.id);
+ setSelectValue('batchLongevity',cls.id==='perfume'?12:cls.id==='edp'?8:cls.id==='edt'?5:3);
+ calcBatch();
+}
+function batchGuidanceHTML(size,conc,oil,carrier,cls,projection){
+ return '<div class="batch-guidance"><div class="batch-classification"><span>التصنيف المتوقع</span><b>'+esc(cls.name)+'</b><small>'+esc(cls.en)+'</small></div><div class="batch-mix-summary"><div><span>خلاصة عطرية</span><b>'+conc+'%</b><small>'+oil.toFixed(2)+' ml</small></div><div><span>كحول/قاعدة</span><b>'+(100-conc).toFixed(0)+'%</b><small>'+carrier.toFixed(2)+' ml</small></div></div><div class="batch-longevity">ثبات تقريبي: <b>'+cls.hMin+'–'+cls.hMax+' ساعات</b> • '+esc(batchProjectionAdvice(projection))+'</div><small class="safety-note">الثبات والفوحان تقديريان ويتأثران بالمواد الخام والبشرة والطقس. راجع IFRA وSDS وتعليمات المورد قبل الاستخدام الجلدي.</small></div>';
+}
 function calcBatch(){
- const size=Number(document.getElementById('batchSize').value||50),conc=Number(document.getElementById('conc').value||25),oil=size*conc/100,carrier=size-oil;
- const items=db.draft.notes.map(n=>{const m=MATERIALS.find(x=>x.id===n.id);return {id:n.id,name:m.name,ml:oil*(n.pct/100)}});
- pendingBatch={size,conc,oil,carrier,items,name:db.draft.name||'دفعة عطر'};
- let html=`<div class="card batch-calculation" style="margin-top:10px"><p>الزيت العطري: <b>${oil.toFixed(2)} ml</b> • الكحول/القاعدة: <b>${carrier.toFixed(2)} ml</b></p>`;
- html+=items.map(i=>{const stock=db.supplies.find(x=>x.id===materialSupplyId(i.id));const remain=stock?.bought?formatSupplyAmount(stock):'غير مسجل';return `<p>${i.name}: <b>${i.ml.toFixed(2)} ml</b> <small>• المخزون: ${remain}</small></p>`}).join('');
- const alcohol=db.supplies.find(x=>x.id==='ethanol');html+=`<p>الكحول: <b>${carrier.toFixed(2)} ml</b> <small>• المخزون: ${alcohol?.bought?formatSupplyAmount(alcohol):'غير مسجل'}</small></p>`;
- html+=`<button class="inventory-use-btn" onclick="commitBatchUsage()">✓ تسجيل تنفيذ الدفعة وخصم المخزون</button><small class="inventory-hint">لن يتم خصم أي كمية إلا بعد الضغط على هذا الزر.</small></div>`;
- document.getElementById('batchResult').innerHTML=html
+ const size=Number(document.getElementById('batchSize')?.value||50),conc=Number(document.getElementById('conc')?.value||20),projection=document.getElementById('batchProjection')?.value||'medium';
+ const oil=size*conc/100,carrier=size-oil,cls=classByConcentration(conc);
+ const items=db.draft.notes.map(n=>{const m=MATERIALS.find(x=>x.id===n.id);return {id:n.id,name:m?.name||n.id,ml:oil*(Number(n.pct||0)/100),pct:Number(n.pct||0)}});
+ pendingBatch={size,conc,oil,carrier,items,name:db.draft.name||'دفعة عطر',classId:cls.id,projection};
+ const guide=document.getElementById('batchGuidance');if(guide)guide.innerHTML=batchGuidanceHTML(size,conc,oil,carrier,cls,projection);
+ let html='<div class="card batch-calculation"><div class="batch-table"><div class="head"><span>العنصر</span><span>النسبة</span><span>الكمية</span></div><div><span>خلاصة العطر</span><span>'+conc+'%</span><b>'+oil.toFixed(2)+' ml</b></div><div><span>الكحول/القاعدة</span><span>'+(100-conc).toFixed(0)+'%</span><b>'+carrier.toFixed(2)+' ml</b></div></div>';
+ if(items.length)html+='<div class="batch-material-breakdown"><b>تفصيل الخلاصة حسب تركيبتك</b>'+items.map(i=>{const stock=db.supplies.find(x=>x.id===materialSupplyId(i.id));const remain=stock?.bought?formatSupplyAmount(stock):'غير مسجل';return '<div><span>'+esc(i.name)+'</span><span>'+i.pct.toFixed(1)+'%</span><b>'+i.ml.toFixed(2)+' ml</b><small>المخزون: '+esc(remain)+'</small></div>'}).join('')+'</div>';
+ else html+='<div class="empty compact">أضف مواد للتركيبة كي يظهر توزيع الخلاصة بالتفصيل.</div>';
+ const alcohol=db.supplies.find(x=>x.id==='ethanol');
+ html+='<div class="batch-stock-line">مخزون الكحول: <b>'+(alcohol?.bought?formatSupplyAmount(alcohol):'غير مسجل')+'</b></div><button class="inventory-use-btn" onclick="commitBatchUsage()">✓ تسجيل تنفيذ الدفعة وخصم المخزون</button><small class="inventory-hint">لن يتم خصم أي كمية إلا بعد الضغط على هذا الزر.</small></div>';
+ const box=document.getElementById('batchResult');if(box)box.innerHTML=html;
 }
 function getBatchShortages(batch){
  const issues=[];
