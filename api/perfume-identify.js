@@ -1,44 +1,64 @@
+
+const GEMINI_MODEL=process.env.GEMINI_MODEL||'gemini-2.5-flash-lite';
+function geminiUrl(){
+  return 'https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(GEMINI_MODEL)+':generateContent';
+}
+function extractGeminiText(raw){
+  return (raw?.candidates?.[0]?.content?.parts||[]).map(p=>p?.text||'').join('').trim();
+}
+function parseJsonText(text){
+  const clean=String(text||'').replace(/^```json\s*/i,'').replace(/```$/,'').trim();
+  const first=clean.indexOf('{'),last=clean.lastIndexOf('}');
+  return JSON.parse(first>=0&&last>first?clean.slice(first,last+1):clean);
+}
+
+function imagePartFromDataUrl(image){
+  if(!image||typeof image!=='string')return null;
+  const m=image.match(/^data:([^;]+);base64,(.+)$/);
+  if(!m)return null;
+  return {inline_data:{mime_type:m[1],data:m[2]}};
+}
+function geminiSources(raw){
+  const chunks=raw?.candidates?.[0]?.groundingMetadata?.groundingChunks||[];
+  const seen=new Set(),out=[];
+  for(const c of chunks){
+    const w=c?.web;if(!w?.uri||seen.has(w.uri))continue;
+    seen.add(w.uri);out.push({title:w.title||w.uri,url:w.uri});
+  }
+  return out.slice(0,6);
+}
 export default async function handler(req,res){
   res.setHeader('Access-Control-Allow-Origin','*');
   res.setHeader('Access-Control-Allow-Headers','Content-Type');
   res.setHeader('Access-Control-Allow-Methods','POST,OPTIONS');
+  res.setHeader('Cache-Control','no-store');
   if(req.method==='OPTIONS') return res.status(204).end();
   if(req.method!=='POST') return res.status(405).json({error:'METHOD_NOT_ALLOWED'});
-  if(!process.env.OPENAI_API_KEY) return res.status(503).json({error:'AI_NOT_CONFIGURED'});
+  if(!process.env.GEMINI_API_KEY) return res.status(503).json({error:'AI_NOT_CONFIGURED',provider:'gemini'});
 
   const image=req.body?.image||null;
   const name=String(req.body?.name||'').slice(0,300);
   if(!image&&!name) return res.status(400).json({error:'IMAGE_OR_NAME_REQUIRED'});
 
-  const materials=[
-    'bergamot','lemon','lavender','rose','jasmine','cardamom','saffron',
-    'cedar','sandal','oud','amber','vanilla','musk','leather','neroli','patchouli','vetiver','blackpepper','clove','cinnamon','cypriol','guaiac','frankincense'
-  ];
-
+  const materials=['bergamot','lemon','lavender','rose','jasmine','cardamom','saffron','cedar','sandal','oud','amber','vanilla','musk','leather','neroli','patchouli','vetiver','blackpepper','clove','cinnamon','cypriol','guaiac','frankincense'];
   const mode=String(req.body?.mode||'identify');
   const selected=req.body?.selected||null;
 
-  if(mode==='search' && name && !image){
-    const searchPrompt='أنت باحث متخصص في العطور. ابحث على الويب عن جميع المنتجات المحتملة التي تطابق الاسم: "'+name+'". المطلوب إزالة الالتباس قبل اختيار المستخدم، وليس تخمين عطر واحد. أعد JSON فقط بهذا الشكل: {"mode":"candidates","query":"'+name+'","candidates":[{"brand":"","product_name":"","concentration":"","year":"","disambiguation":""}]}. أعط حتى 10 نتائج حقيقية ومختلفة فقط، ولا تكرر نفس المنتج. إذا توجد إصدارات متعددة من نفس الخط فأظهرها منفصلة. استخدم العلامة التجارية والاسم الكامل والتركيز أو سنة الإصدار عند توفرها. لا تنشئ clone_notes في هذه المرحلة.';
-    const sr=await fetch('https://api.openai.com/v1/responses',{
+  if(mode==='search'&&name&&!image){
+    const prompt='أنت باحث متخصص في العطور. ابحث على الويب عن جميع المنتجات المحتملة التي تطابق الاسم: "'+name+'". أعد JSON فقط بالشكل {"mode":"candidates","query":"'+name+'","candidates":[{"brand":"","product_name":"","concentration":"","year":"","disambiguation":""}]}. أعط حتى 10 نتائج حقيقية مختلفة ولا تكرر نفس المنتج، وافصل الإصدارات المختلفة.';
+    const r=await fetch(geminiUrl(),{
       method:'POST',
-      headers:{'Authorization':'Bearer '+process.env.OPENAI_API_KEY,'Content-Type':'application/json'},
+      headers:{'x-goog-api-key':process.env.GEMINI_API_KEY,'Content-Type':'application/json'},
       body:JSON.stringify({
-        model:process.env.OPENAI_MODEL||'gpt-5.6-luna',
-        tools:[{type:'web_search'}],
-        tool_choice:'auto',
-        input:searchPrompt,
-        max_output_tokens:1200
+        contents:[{role:'user',parts:[{text:prompt}]}],
+        tools:[{google_search:{}}],
+        generationConfig:{responseMimeType:'application/json',temperature:0.2,maxOutputTokens:1200}
       })
     });
-    const raw=await sr.json();
-    if(!sr.ok) return res.status(sr.status).json({error:'OPENAI_ERROR',details:raw?.error?.message||'Search failed'});
-    let txt=raw.output_text||'';
-    if(!txt)for(const item of raw.output||[])for(const c of item.content||[])if(c.type==='output_text')txt=c.text||txt;
+    const raw=await r.json().catch(()=>({}));
+    if(!r.ok)return res.status(r.status).json({error:'GEMINI_ERROR',details:raw?.error?.message||'Search failed',provider:'gemini'});
     try{
-      const clean=txt.replace(/^```json\s*/i,'').replace(/```$/,'').trim();
-      const first=clean.indexOf('{'),last=clean.lastIndexOf('}');
-      const out=JSON.parse(first>=0&&last>first?clean.slice(first,last+1):clean);
+      const out=parseJsonText(extractGeminiText(raw));
       const candidates=(Array.isArray(out.candidates)?out.candidates:[]).slice(0,10).map(x=>({
         brand:String(x.brand||'').slice(0,120),
         product_name:String(x.product_name||'').slice(0,180),
@@ -46,82 +66,37 @@ export default async function handler(req,res){
         year:String(x.year||'').slice(0,20),
         disambiguation:String(x.disambiguation||'').slice(0,240)
       })).filter(x=>x.product_name);
-      return res.status(200).json({mode:'candidates',query:name,candidates});
-    }catch{
-      return res.status(502).json({error:'MODEL_FORMAT',raw:txt});
-    }
+      return res.status(200).json({mode:'candidates',query:name,candidates,sources:geminiSources(raw)});
+    }catch{return res.status(502).json({error:'MODEL_FORMAT',provider:'gemini'});}
   }
-  const prompt=`
-أنت خبير عطور وباحث منتجات. مهمتك:
-1) إذا أُرفقت صورة، تعرّف على اسم العطر والعلامة التجارية من شكل الزجاجة والنص الظاهر، وكن صريحًا في درجة الثقة.
-2) استخدم البحث على الويب للتحقق من المنتج والعثور على النوتات العطرية المنشورة عنه من مصادر موثوقة.
-3) لا تدّع معرفة الصيغة التجارية السرية. فرّق بوضوح بين "النوتات المنشورة" و"صيغة مستوحاة".
-4) ابنِ صيغة مستوحاة من 5 إلى 8 مواد فقط من هذه القائمة: ${materials.join(', ')}، ومجموع النسب 100.
-5) أعد JSON فقط بدون markdown بهذا الشكل:
-{
- "brand":"",
- "product_name":"",
- "confidence":"high|medium|low",
- "top_notes":[],
- "heart_notes":[],
- "base_notes":[],
- "accords":[],
- "rationale":"شرح عربي موجز",
- "clone_notes":[{"id":"bergamot","pct":15}]
-}
-إذا لم تستطع التأكد من العطر فلا تخمّن بثقة عالية.
+
+  const prompt=`أنت خبير عطور وباحث منتجات.
+1) إذا أُرفقت صورة، تعرّف على اسم العطر والعلامة التجارية من شكل الزجاجة والنص الظاهر واذكر درجة الثقة.
+2) استخدم Google Search للتحقق من المنتج والنوتات المنشورة عنه.
+3) لا تدّع معرفة الصيغة التجارية السرية.
+4) ابنِ صيغة مستوحاة من 5 إلى 8 مواد فقط من: ${materials.join(', ')} ومجموعها 100.
+5) أعد JSON فقط:
+{"brand":"","product_name":"","confidence":"high|medium|low","top_notes":[],"heart_notes":[],"base_notes":[],"accords":[],"rationale":"","clone_notes":[{"id":"bergamot","pct":15}]}
 اسم يدوي اختياري: ${name||'غير مذكور'}
-${selected?`هذا هو المنتج الذي اختاره المستخدم تحديدًا: ${JSON.stringify(selected)}. التزم بهذا المنتج ولا تستبدله بإصدار مشابه.`:''}
-`;
+${selected?'هذا هو المنتج الذي اختاره المستخدم تحديدًا: '+JSON.stringify(selected):''}`;
 
-  const content=[{type:'input_text',text:prompt}];
-  if(image) content.push({type:'input_image',image_url:image});
-
-  const r=await fetch('https://api.openai.com/v1/responses',{
+  const parts=[{text:prompt}];
+  const ip=imagePartFromDataUrl(image);if(ip)parts.push(ip);
+  const r=await fetch(geminiUrl(),{
     method:'POST',
-    headers:{
-      'Authorization':'Bearer '+process.env.OPENAI_API_KEY,
-      'Content-Type':'application/json'
-    },
+    headers:{'x-goog-api-key':process.env.GEMINI_API_KEY,'Content-Type':'application/json'},
     body:JSON.stringify({
-      model:process.env.OPENAI_MODEL||'gpt-5.6-luna',
-      tools:[{type:'web_search'}],
-      tool_choice:'auto',
-      include:['web_search_call.action.sources'],
-      input:[{role:'user',content}],
-      max_output_tokens:1600
+      contents:[{role:'user',parts}],
+      tools:[{google_search:{}}],
+      generationConfig:{responseMimeType:'application/json',temperature:0.2,maxOutputTokens:1600}
     })
   });
-
-  const raw=await r.json();
-  if(!r.ok) return res.status(r.status).json({error:'OPENAI_ERROR',details:raw?.error?.message||'Request failed'});
-
-  let text='';
-  const sources=[];
-  if(typeof raw.output_text==='string') text=raw.output_text;
-  for(const item of raw.output||[]){
-    if(item.type==='web_search_call'){
-      const srcs=item.action?.sources||item.sources||[];
-      for(const src of srcs){
-        if(src?.url&&!sources.some(x=>x.url===src.url))sources.push({title:src.title||src.url,url:src.url});
-      }
-    }
-    for(const c of item.content||[]){
-      if(c.type==='output_text'&&typeof c.text==='string') text=c.text;
-      for(const a of c.annotations||[]){
-        if(a.type==='url_citation'&&a.url&&!sources.some(x=>x.url===a.url))sources.push({title:a.title||a.url,url:a.url});
-      }
-    }
-  }
-
+  const raw=await r.json().catch(()=>({}));
+  if(!r.ok)return res.status(r.status).json({error:'GEMINI_ERROR',details:raw?.error?.message||'Request failed',provider:'gemini'});
   try{
-    const clean=text.replace(/^\`\`\`json\s*/i,'').replace(/\`\`\`$/,'').trim();
-    const first=clean.indexOf('{'),last=clean.lastIndexOf('}');
-    const out=JSON.parse(first>=0&&last>first?clean.slice(first,last+1):clean);
+    const out=parseJsonText(extractGeminiText(raw));
     out.clone_notes=(out.clone_notes||[]).filter(n=>materials.includes(n.id)).map(n=>({id:n.id,pct:Number(n.pct)||0}));
-    out.sources=sources.slice(0,6);
+    out.sources=geminiSources(raw);
     return res.status(200).json(out);
-  }catch{
-    return res.status(502).json({error:'MODEL_FORMAT',raw:text,sources:sources.slice(0,6)});
-  }
+  }catch{return res.status(502).json({error:'MODEL_FORMAT',provider:'gemini',sources:geminiSources(raw)});}
 }
