@@ -15,6 +15,40 @@ export default async function handler(req,res){
     'cedar','sandal','oud','amber','vanilla','musk','leather','neroli','patchouli','vetiver','blackpepper','clove','cinnamon','cypriol','guaiac','frankincense'
   ];
 
+  const mode=String(req.body?.mode||'identify');
+  const selected=req.body?.selected||null;
+
+  if(mode==='search' && name && !image){
+    const searchPrompt='أنت باحث متخصص في العطور. ابحث على الويب عن جميع المنتجات المحتملة التي تطابق الاسم: "'+name+'". المطلوب إزالة الالتباس قبل اختيار المستخدم، وليس تخمين عطر واحد. أعد JSON فقط بهذا الشكل: {"mode":"candidates","query":"'+name+'","candidates":[{"brand":"","product_name":"","concentration":"","year":"","disambiguation":""}]}. أعط حتى 10 نتائج حقيقية ومختلفة فقط، ولا تكرر نفس المنتج. إذا توجد إصدارات متعددة من نفس الخط فأظهرها منفصلة. استخدم العلامة التجارية والاسم الكامل والتركيز أو سنة الإصدار عند توفرها. لا تنشئ clone_notes في هذه المرحلة.';
+    const sr=await fetch('https://api.openai.com/v1/responses',{
+      method:'POST',
+      headers:{'Authorization':'Bearer '+process.env.OPENAI_API_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:process.env.OPENAI_MODEL||'gpt-5.6-luna',
+        tools:[{type:'web_search'}],
+        tool_choice:'auto',
+        input:searchPrompt
+      })
+    });
+    const raw=await sr.json();
+    if(!sr.ok) return res.status(sr.status).json({error:'OPENAI_ERROR',details:raw?.error?.message||'Search failed'});
+    let txt=raw.output_text||'';
+    if(!txt)for(const item of raw.output||[])for(const c of item.content||[])if(c.type==='output_text')txt=c.text||txt;
+    try{
+      const clean=txt.replace(/^```json\s*/i,'').replace(/```$/,'').trim();
+      const out=JSON.parse(clean);
+      const candidates=(Array.isArray(out.candidates)?out.candidates:[]).slice(0,10).map(x=>({
+        brand:String(x.brand||'').slice(0,120),
+        product_name:String(x.product_name||'').slice(0,180),
+        concentration:String(x.concentration||'').slice(0,80),
+        year:String(x.year||'').slice(0,20),
+        disambiguation:String(x.disambiguation||'').slice(0,240)
+      })).filter(x=>x.product_name);
+      return res.status(200).json({mode:'candidates',query:name,candidates});
+    }catch{
+      return res.status(502).json({error:'MODEL_FORMAT',raw:txt});
+    }
+  }
   const prompt=`
 أنت خبير عطور وباحث منتجات. مهمتك:
 1) إذا أُرفقت صورة، تعرّف على اسم العطر والعلامة التجارية من شكل الزجاجة والنص الظاهر، وكن صريحًا في درجة الثقة.
@@ -35,6 +69,7 @@ export default async function handler(req,res){
 }
 إذا لم تستطع التأكد من العطر فلا تخمّن بثقة عالية.
 اسم يدوي اختياري: ${name||'غير مذكور'}
+${selected?`هذا هو المنتج الذي اختاره المستخدم تحديدًا: ${JSON.stringify(selected)}. التزم بهذا المنتج ولا تستبدله بإصدار مشابه.`:''}
 `;
 
   const content=[{type:'input_text',text:prompt}];
