@@ -76,6 +76,7 @@ for(const def of SUPPLY_DEFAULTS){
 if(!Array.isArray(db.usageHistory))db.usageHistory=[];
 if(!Array.isArray(db.cloneArchive))db.cloneArchive=[];
 if(!Array.isArray(db.shoppingList))db.shoppingList=[];
+if(db.draft&&db.draft.aiPerformance===undefined)db.draft.aiPerformance=null;
 if(!db.backend)db.backend={enabled:true,url:'https://ruh-al-yassmin.vercel.app',lastStatus:'unknown'};
 if(!db.backend.url)db.backend.url='https://ruh-al-yassmin.vercel.app';
 const ROUTES=['home','create','lab','materials','formulas','knowledge','pyramid','favorites','profile','settings','backend','supplies','clone','assistant'];
@@ -609,6 +610,21 @@ function assistant(){return `${pageHero('مساعد روح الياسمين','ص
 <div id="aiResult" class="ai-result"></div></section>`}
 function fillAI(text){const el=document.getElementById('aiPrompt');if(el){el.value=text;el.focus()}}
 function setAILoading(on){const b=document.getElementById('aiSendBtn');if(b){b.disabled=on;b.textContent=on?'جاري تحليل فكرتك...':'✦ أنشئ التركيبة بالذكاء الاصطناعي'}}
+function normalizeAIPerformance(data){
+ const classes=['edc','edt','edp','perfume'];
+ const projections=['soft','medium','strong','very-strong'];
+ const cls=classes.includes(data?.perfume_class)?data.perfume_class:classByConcentration(Number(data?.concentration)||20).id;
+ const projection=projections.includes(data?.projection)?data.projection:'medium';
+ const concentration=Math.max(5,Math.min(40,Number(data?.concentration)||classById(cls).rec));
+ const longevity=Math.max(2,Math.min(16,Number(data?.longevity_hours)||((classById(cls).hMin+classById(cls).hMax)/2)));
+ return {classId:cls,projection,concentration,longevity,reason:String(data?.performance_reason||'')};
+}
+function longevitySelectValue(hours){hours=Number(hours)||8;return hours>=9?12:hours>=6?8:hours>=4?5:3}
+function projectionLabel(v){return v==='very-strong'?'قوي جدًا':v==='strong'?'قوي':v==='soft'?'ناعم':'متوازن'}
+function aiPerformanceHTML(perf){
+ const cls=classById(perf.classId);
+ return '<div class="ai-performance-card"><div><span>التصنيف المقترح</span><b>'+esc(cls.name)+' • '+esc(cls.en)+'</b></div><div><span>الخلاصة</span><b>'+Number(perf.concentration).toFixed(0)+'%</b></div><div><span>الفوحان</span><b>'+esc(projectionLabel(perf.projection))+'</b></div><div><span>الثبات المستهدف</span><b>حوالي '+Number(perf.longevity).toFixed(0)+' ساعات</b></div>'+(perf.reason?'<p>'+esc(perf.reason)+'</p>':'')+'</div>';
+}
 let aiPendingFormula=null;
 let aiRequestMode='new';
 function aiContext(includeCurrent=false){
