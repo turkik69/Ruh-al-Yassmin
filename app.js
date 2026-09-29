@@ -319,17 +319,44 @@ function pyramid(){return `${pageHero('الهرم العطري','زجاجة وا
 ${workflowStrip('knowledge')}
 <section class="pyramid-learning lux-panel tone-cream">
  <div class="pyramid-bottle-image-wrap">
-  <img src="pyramid-bottle.jpg?v=35" class="pyramid-bottle-image" alt="زجاجة الهرم العطري">
+  <svg class="pyramid-vector-bottle" viewBox="0 0 600 820" role="img" aria-label="زجاجة الهرم العطري">
+   <defs>
+    <linearGradient id="goldCap" x1="0" x2="1"><stop offset="0" stop-color="#9c6b1f"/><stop offset=".22" stop-color="#f7d98a"/><stop offset=".52" stop-color="#b87a21"/><stop offset=".78" stop-color="#ffe8a8"/><stop offset="1" stop-color="#8d5e18"/></linearGradient>
+    <linearGradient id="glassStroke" x1="0" x2="1"><stop offset="0" stop-color="#b77d2b"/><stop offset=".18" stop-color="#fff3c5"/><stop offset=".48" stop-color="#9d661d"/><stop offset=".78" stop-color="#ffeab0"/><stop offset="1" stop-color="#8a5818"/></linearGradient>
+    <linearGradient id="topLiquid" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff0a9"/><stop offset=".55" stop-color="#f9cf4f"/><stop offset="1" stop-color="#e7a81c"/></linearGradient>
+    <linearGradient id="heartLiquid" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f8cae6"/><stop offset=".5" stop-color="#ed93c2"/><stop offset="1" stop-color="#d864a2"/></linearGradient>
+    <linearGradient id="baseLiquid" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#efa039"/><stop offset=".55" stop-color="#c96f19"/><stop offset="1" stop-color="#7f3f16"/></linearGradient>
+    <filter id="bottleShadow"><feDropShadow dx="0" dy="18" stdDeviation="16" flood-color="#77521f" flood-opacity=".18"/></filter>
+    <clipPath id="innerClip"><rect x="122" y="185" width="356" height="525" rx="42"/></clipPath>
+   </defs>
+   <g filter="url(#bottleShadow)">
+    <rect x="160" y="18" width="280" height="105" rx="34" fill="url(#goldCap)" stroke="#7d5318" stroke-width="5"/>
+    <rect x="252" y="108" width="96" height="70" rx="18" fill="url(#goldCap)" stroke="#83591d" stroke-width="4"/>
+    <rect x="92" y="150" width="416" height="610" rx="68" fill="rgba(255,255,255,.12)" stroke="url(#glassStroke)" stroke-width="14"/>
+    <g clip-path="url(#innerClip)">
+      <rect x="122" y="185" width="356" height="170" fill="url(#topLiquid)"/>
+      <rect x="122" y="355" width="356" height="178" fill="url(#heartLiquid)"/>
+      <rect x="122" y="533" width="356" height="177" fill="url(#baseLiquid)"/>
+      <circle cx="185" cy="245" r="22" fill="#fff8d8"/><circle cx="167" cy="228" r="11" fill="#fff"/><circle cx="202" cy="225" r="10" fill="#fff"/>
+      <path d="M155 300 Q190 245 220 298 Q192 330 155 300" fill="#fff7dd"/><circle cx="388" cy="287" r="38" fill="#ffd34f"/><circle cx="388" cy="287" r="29" fill="#fff2a8"/>
+      <circle cx="188" cy="446" r="47" fill="#ee77ae"/><circle cx="188" cy="446" r="31" fill="#f3a3c9"/><circle cx="188" cy="446" r="15" fill="#d04d8d"/>
+      <path d="M376 428 q34-62 62 0 q-32 23-62 0M382 470 q34-62 62 0 q-32 23-62 0" fill="#7c55c7"/>
+      <path d="M150 650 l86-70 18 21-86 70zM188 682 l88-75 16 20-86 78z" fill="#6b3516"/>
+      <path d="M332 656 q22-46 45 0 q-22 20-45 0M376 675 q20-42 42 0 q-20 18-42 0" fill="#3b2418"/><circle cx="288" cy="618" r="18" fill="#ffb52b"/>
+    </g>
+    <rect x="122" y="185" width="356" height="525" rx="42" fill="none" stroke="rgba(255,255,255,.58)" stroke-width="5"/>
+   </g>
+   <g font-family="Arial, sans-serif" text-anchor="middle" direction="rtl">
+    <text x="300" y="255" font-size="42" font-weight="800" fill="#4a2817">الافتتاحية</text><text x="300" y="295" font-size="22" font-weight="600" fill="#563019">الانطباع الأول • أخف وأسرع</text><circle cx="435" cy="235" r="30" fill="#fff5d3"/><text x="435" y="244" font-size="24" font-weight="800" fill="#5b3019">01</text>
+    <text x="300" y="435" font-size="44" font-weight="800" fill="#5a173c">القلب</text><text x="300" y="476" font-size="22" font-weight="600" fill="#6d244d">شخصية العطر • مركز التوازن</text><circle cx="435" cy="412" r="30" fill="#fff1f8"/><text x="435" y="421" font-size="24" font-weight="800" fill="#6a244c">02</text>
+    <text x="300" y="610" font-size="44" font-weight="800" fill="#4a2515">القاعدة</text><text x="300" y="651" font-size="22" font-weight="600" fill="#4d2919">العمق والثبات • الأثر الأخير</text><circle cx="435" cy="588" r="30" fill="#fff0d0"/><text x="435" y="597" font-size="24" font-weight="800" fill="#5a2e18">03</text>
+   </g>
+  </svg>
   <button class="pyramid-hotspot hotspot-top" onclick="showPyramidLevel('افتتاحية')" aria-label="شرح الافتتاحية"></button>
   <button class="pyramid-hotspot hotspot-heart" onclick="showPyramidLevel('قلب')" aria-label="شرح القلب"></button>
   <button class="pyramid-hotspot hotspot-base" onclick="showPyramidLevel('قاعدة')" aria-label="شرح القاعدة"></button>
  </div>
- <div class="pyramid-explain">
-  <span class="mini-label">اضغط على أي طبقة داخل الزجاجة</span><h3>العطر يتغير مع الزمن</h3>
-  <p>الهرم لا يعني أن الطبقات منفصلة؛ بل تتداخل تدريجيًا. استخدم كل طبقة كنقطة قرار أثناء بناء التركيبة.</p>
-  <div class="pyramid-ratio-guide"><span><i class="top"></i>افتتاحية <b>15–25%</b></span><span><i class="heart"></i>قلب <b>30–45%</b></span><span><i class="base"></i>قاعدة <b>30–45%</b></span></div>
-  <small class="safety-note">هذه نطاقات تعليمية أولية وليست قاعدة ثابتة؛ تختلف حسب المواد والطابع والتركيز النهائي.</small>
- </div>
+ <div class="pyramid-explain"><span class="mini-label">اضغط على أي طبقة داخل الزجاجة</span><h3>العطر يتغير مع الزمن</h3><p>الهرم لا يعني أن الطبقات منفصلة؛ بل تتداخل تدريجيًا. استخدم كل طبقة كنقطة قرار أثناء بناء التركيبة.</p><div class="pyramid-ratio-guide"><span><i class="top"></i>افتتاحية <b>15–25%</b></span><span><i class="heart"></i>قلب <b>30–45%</b></span><span><i class="base"></i>قاعدة <b>30–45%</b></span></div><small class="safety-note">هذه نطاقات تعليمية أولية وليست قاعدة ثابتة؛ تختلف حسب المواد والطابع والتركيز النهائي.</small></div>
 </section>
 <section class="knowledge-next"><button onclick="openMaterialsLevel('افتتاحية')">استكشف مواد الافتتاحية</button><button onclick="openMaterialsLevel('قلب')">استكشف مواد القلب</button><button onclick="openMaterialsLevel('قاعدة')">استكشف مواد القاعدة</button></section>`}
 function favorites(){const list=db.formulas.slice(0,6);return `${pageHero('المفضلة','مكان سريع للرجوع إلى التركيبات التي تعمل عليها','♡','pink')}${list.length?`<div class="formula-cards material-list">${list.map((f,i)=>`<div class="formula-card formula-tone-${i%4}"><div class="formula-v">${esc(f.version)}</div><div class="formula-copy"><strong>${esc(f.name)}</strong><small>${esc(f.mood)} • ${f.notes.length} مواد</small></div><button class="formula-open" onclick="openFormula('${f.id}')">فتح</button></div>`).join('')}</div>`:'<div class="empty lux-panel tone-pink">عندما تحفظ تركيباتك ستظهر هنا للرجوع السريع.</div>'}`}
