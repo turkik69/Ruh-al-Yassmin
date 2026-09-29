@@ -26,7 +26,7 @@ export default async function handler(req,res){
   const context=req.body?.context||{};
   if(!prompt) return res.status(400).json({error:'EMPTY_PROMPT'});
 
-  const instructions=`أنت خبير عطور داخل تطبيق "روح الياسمين". اقترح صيغة عطرية تجريبية فقط من المعرفات التالية: ${MATERIAL_IDS.join(', ')}. اجعل مجموع النسب 100، وعدد المواد 5 إلى 8. أعد JSON فقط بالشكل {"name":"","mood":"","occasion":"","rationale":"","notes":[{"id":"bergamot","pct":15}]}. لا تدّع أن النسب آمنة للاستخدام الجلدي بمجرد اقتراحها؛ اجعل rationale يذكر مراجعة IFRA وSDS وحدود المورد وإجراء اختبار مناسب قبل الاستخدام.`;
+  const instructions=`أنت خبير عطور داخل تطبيق "روح الياسمين". ابنِ وصفة جديدة اعتمادًا على وصف المستخدم الحالي فقط، ولا تورث إعدادات من طلب سابق إلا إذا كان mode=review. استخدم فقط المعرفات التالية للمواد: ${MATERIAL_IDS.join(', ')}. اجعل مجموع نسب notes = 100، وعدد المواد 5 إلى 8. استنتج الأداء ديناميكيًا من وصف المستخدم: projection واحدة من soft, medium, strong, very-strong؛ perfume_class واحدة من edc, edt, edp, perfume؛ concentration رقم بين 5 و40؛ longevity_hours رقم تقريبي بين 2 و16. اختر القيم من وصف المستخدم نفسه ولا تجعلها ثابتة، ولا تعتبر التركيز العالي مرادفًا تلقائيًا للفوحان العالي. أعد JSON فقط بالشكل {"name":"","mood":"","occasion":"","rationale":"","projection":"medium","perfume_class":"edp","concentration":20,"longevity_hours":8,"performance_reason":"","notes":[{"id":"bergamot","pct":15}]}. لا تدّع أن النسب آمنة للاستخدام الجلدي بمجرد اقتراحها؛ اجعل rationale يذكر مراجعة IFRA وSDS وحدود المورد وإجراء اختبار مناسب قبل الاستخدام.`;
 
   const r=await fetch(geminiUrl(),{
     method:'POST',
@@ -42,6 +42,13 @@ export default async function handler(req,res){
   try{
     const out=parseJsonText(extractGeminiText(raw));
     out.notes=(out.notes||[]).filter(n=>MATERIAL_IDS.includes(n.id)).map(n=>({id:n.id,pct:Number(n.pct)||0}));
+    const projections=['soft','medium','strong','very-strong'];
+    const classes=['edc','edt','edp','perfume'];
+    if(!projections.includes(out.projection))out.projection='medium';
+    if(!classes.includes(out.perfume_class))out.perfume_class='edp';
+    out.concentration=Math.max(5,Math.min(40,Number(out.concentration)||20));
+    out.longevity_hours=Math.max(2,Math.min(16,Number(out.longevity_hours)||8));
+    out.performance_reason=String(out.performance_reason||'').slice(0,500);
     return res.status(200).json(out);
   }catch{
     return res.status(502).json({error:'MODEL_FORMAT',provider:'gemini'});
