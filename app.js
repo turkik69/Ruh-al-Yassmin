@@ -74,20 +74,34 @@ if(!db.backend)db.backend={enabled:true,url:'https://ruh-al-yassmin.vercel.app',
 if(!db.backend.url)db.backend.url='https://ruh-al-yassmin.vercel.app';
 const ROUTES=['home','create','lab','materials','formulas','knowledge','pyramid','favorites','profile','settings','backend','supplies','clone','assistant'];
 let route=ROUTES.includes(sessionStorage.getItem('ruhYasminRoute'))?sessionStorage.getItem('ruhYasminRoute'):'home';
+let routeHistory=(()=>{try{const x=JSON.parse(sessionStorage.getItem('ruhYasminHistory')||'[]');return Array.isArray(x)?x.filter(r=>ROUTES.includes(r)):[]}catch{return []}})();
 const view=document.getElementById('view');
 const modal=document.getElementById('modal');
 const modalContent=document.getElementById('modalContent');
 const save=()=>localStorage.setItem(DBKEY,JSON.stringify(db));
 const esc=s=>String(s??'').replace(/[&<>'"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[m]));
 const toast=(m)=>{const t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),1800)};
-function setRoute(r){
+function setRoute(r,fromBack=false){
  if(!ROUTES.includes(r))r='home';
+ if(!fromBack&&r!==route){
+  routeHistory.push(route);
+  routeHistory=routeHistory.slice(-30);
+  sessionStorage.setItem('ruhYasminHistory',JSON.stringify(routeHistory));
+ }
  route=r;
  sessionStorage.setItem('ruhYasminRoute',route);
  document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active',b.dataset.route===r));
  render();
  window.scrollTo({top:0,behavior:'instant'});
 }
+function goBack(){
+ let prev=routeHistory.pop();
+ while(prev===route&&routeHistory.length)prev=routeHistory.pop();
+ if(!ROUTES.includes(prev))prev='home';
+ sessionStorage.setItem('ruhYasminHistory',JSON.stringify(routeHistory));
+ setRoute(prev,true);
+}
+window.goBack=goBack;
 function renderKeepScroll(){
  const y=window.scrollY;
  render();
@@ -148,6 +162,11 @@ function home(){
    <img src="hero-art.svg" alt="روح الياسمين - مختبر صناعة العطور">
    <div class="hero-overlay concept-copy"><span class="eyebrow">مختبرك الشخصي لصناعة العطور</span><h2>روح الياسمين</h2><p>حيث تتحول المشاعر إلى عطور</p></div>
  </section>
+ <section class="home-perfume-search lux-panel tone-gold">
+  <div class="panel-heading"><div><span class="mini-label">ابحث عن عطر معروف</span><h3>ابحث بالاسم وصمّم نسختك</h3></div><span class="panel-icon">⌕</span></div>
+  <div class="home-search-bar"><input id="homePerfumeSearch" placeholder="مثال: Dior Homme أو Oud Wood" onkeydown="if(event.key==='Enter')searchPerfumeFromHome()"><button onclick="searchPerfumeFromHome()">بحث</button></div>
+  <div id="homePerfumeSearchResults"></div>
+ </section>
  <div class="home-grid concept-grid">
    <button class="home-tile tile-pink art-card" onclick="setRoute('create')"><span class="card-art art-perfume">◉</span><span class="tile-copy"><b>اصنع عطرك</b><small>امزج المكونات وابتكر عطرك الخاص خطوة بخطوة</small></span><span class="tile-icon">→</span></button>
    <button class="home-tile tile-teal art-card" onclick="setRoute('lab')"><span class="card-art art-lab">⚗</span><span class="tile-copy"><b>المختبر</b><small>أدوات احترافية للخلط وتجربة التركيبات</small></span><span class="tile-icon">→</span></button>
@@ -160,7 +179,34 @@ function home(){
  </div>
  <section class="journey concept-journey"><div><b>رحلة لا تنتهي من الإبداع</b><small>اكتشف • امزج • جرّب • واصنع قصتك العطرية</small></div><span>✿</span></section>`
 }
-function pageHero(title,subtitle,icon,variant='gold'){return `<section class="subpage-hero subpage-${variant}"><div class="subpage-hero-copy"><span class="subpage-kicker">روح الياسمين</span><h2>${icon} ${title}</h2><p>${subtitle}</p></div><button class="subpage-orb" onclick="setRoute('home')" aria-label="العودة للرئيسية">${icon}</button></section>`}
+async function searchPerfumeFromHome(){
+ const q=document.getElementById('homePerfumeSearch')?.value?.trim()||'';
+ const box=document.getElementById('homePerfumeSearchResults');
+ if(!q)return toast('اكتب اسم العطر أولاً');
+ if(box)box.innerHTML='<div class="ai-thinking">✦ أبحث عن العطور والإصدارات المطابقة...</div>';
+ try{
+  const res=await fetch(cloneEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:q,mode:'search'})});
+  if(!res.ok)throw new Error('SEARCH_FAILED');
+  const data=await res.json();
+  homeSearchCandidates=Array.isArray(data.candidates)?data.candidates.slice(0,10):[];
+  saveCloneArchive({type:'search',query:q,candidates:structuredClone(homeSearchCandidates)});
+  if(!homeSearchCandidates.length){if(box)box.innerHTML='<div class="empty">لم أجد نتائج واضحة. جرّب كتابة العلامة التجارية مع اسم العطر.</div>';return}
+  if(box)box.innerHTML='<div class="home-search-results">'+homeSearchCandidates.map((x,i)=>'<button class="home-search-result" onclick="selectHomePerfumeResult('+i+')"><div><b>'+esc(x.product_name||'عطر')+'</b><span>'+esc(x.brand||'علامة غير محددة')+(x.concentration?' • '+esc(x.concentration):'')+(x.year?' • '+esc(x.year):'')+'</span></div><small>'+esc(x.disambiguation||'اضغط لاختيار هذا الإصدار')+'</small><strong>اختيار ←</strong></button>').join('')+'</div>';
+ }catch(e){if(box)box.innerHTML='<div class="ai-error">تعذر البحث الآن. تحقق من Backend وOpenAI ثم حاول مرة أخرى.</div>'}
+}
+async function selectHomePerfumeResult(index){
+ const item=homeSearchCandidates[index];if(!item)return;
+ const box=document.getElementById('homePerfumeSearchResults');
+ if(box)box.innerHTML='<div class="ai-thinking">✦ أجلب نوتات '+esc([item.brand,item.product_name].filter(Boolean).join(' — '))+'...</div>';
+ try{
+  const res=await fetch(cloneEndpoint(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'identify',name:[item.brand,item.product_name,item.concentration,item.year].filter(Boolean).join(' '),selected:item})});
+  if(!res.ok)throw new Error('DETAILS_FAILED');
+  const data=await res.json();
+  saveCloneArchive({type:'result',query:String(data?.product_name||item.product_name||''),data:structuredClone(data)});
+  useCloneFormula(data.clone_notes||[],data.product_name||item.product_name||'عطر');
+ }catch(e){if(box)box.innerHTML='<div class="ai-error">تعذر جلب تفاصيل هذا العطر الآن.</div>'}
+}
+function pageHero(title,subtitle,icon,variant='gold'){return `<section class="subpage-hero subpage-${variant}"><button class="page-back-btn" onclick="goBack()" aria-label="رجوع">←</button><div class="subpage-hero-copy"><span class="subpage-kicker">روح الياسمين</span><h2>${icon} ${title}</h2><p>${subtitle}</p></div><button class="subpage-orb" onclick="setRoute('home')" aria-label="العودة للرئيسية">${icon}</button></section>`}
 function create(){ const d=db.draft; return `${pageHero('اصنع عطرك','حوّل فكرتك إلى تركيبة عطرية خاصة بك خطوة بخطوة','✦','pink')}
  <section class="lux-panel tone-pink"><div class="panel-heading"><div><span class="mini-label">هوية العطر</span><h3>ابدأ من الإحساس</h3></div><span class="panel-icon">🌸</span></div>
  <div class="form-grid"><div class="field"><label>اسم العطر</label><input id="fName" value="${esc(d.name)}" placeholder="مثال: ليلة مسقط"></div>
@@ -401,6 +447,7 @@ function markAllSupplies(value){db.supplies.forEach(x=>{x.bought=value;x.capacit
 let cloneImageData='';
 let cloneCandidates=[];
 let createSearchCandidates=[];
+let homeSearchCandidates=[];
 function clonePerfume(){return `${pageHero('استنساخ عطر','صوّر الزجاجة أو اختر صورة، ثم حوّل نوتاتها إلى تركيبة مستوحاة قابلة للتعديل','📷','pink')}
 <section class="clone-capture lux-panel tone-cream">
  <div class="panel-heading"><div><span class="mini-label">التعرف البصري</span><h3>صوّر العطر</h3></div><span class="panel-icon">📷</span></div>
