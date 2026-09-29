@@ -270,6 +270,7 @@ function lab(){const d=db.draft;return `${pageHero('المختبر','اخلط ا
    <section class="stat-glass"><span>مجموع التركيبة</span><b>${totalPct()}%</b></section>
    <section class="stat-glass"><span>عدد المواد</span><b>${d.notes.length}</b></section>
  </div>
+ ${d.aiPerformance?'<section class="lux-panel tone-gold ai-lab-recommendation"><span class="mini-label">اقتراح الذكاء الاصطناعي لهذا الوصف</span>'+aiPerformanceHTML(d.aiPerformance)+'</section>':''}
  ${labStockWarningsHTML()}
  <div class="section-title"><h3>الهرم العطري</h3><span>نسب التركيز داخل الزيت العطري</span></div>${draftNotesHTML()}
  <div class="actions premium-actions"><button class="primary" onclick="addMaterialModal()">+ إضافة مادة</button><button class="secondary" onclick="normalizeDraft()">موازنة إلى 100%</button><button class="ai-action" onclick="openAIReview()">✦ راجع التركيبة بالذكاء الاصطناعي</button></div>
@@ -671,12 +672,14 @@ async function askPerfumeAI(customPrompt){
            mood:data.mood||'',
            occasion:data.occasion||'',
            rationale:data.rationale||'',
-           notes:data.notes.map(n=>({...n}))
+           notes:data.notes.map(n=>({...n})),
+           performance:normalizeAIPerformance(data)
          };
          if(box)box.innerHTML=`<div class="ai-success">
            <b>${esc(aiPendingFormula.name)}</b>
            <p>${esc(aiPendingFormula.rationale||'تم إنشاء تركيبة قابلة للتعديل داخل المختبر.')}</p>
            <div class="ai-note-tags">${aiPendingFormula.notes.map(n=>{const m=MATERIALS.find(x=>x.id===n.id);return `<span>${m.name} ${n.pct}%</span>`}).join('')}</div>
+           ${aiPerformanceHTML(aiPendingFormula.performance)}
            <button class="primary wide-btn" onclick="applyPendingAIFormula()">اعتماد الوصفة وفتحها في المختبر</button>
          </div>`;
          db.backend.lastStatus='online';save();setAILoading(false);toast('تم إنشاء وصفة جديدة بالذكاء الاصطناعي');return;
@@ -696,12 +699,14 @@ async function askPerfumeAI(customPrompt){
    mood:result.mood,
    occasion:result.occasion,
    rationale:result.rationale,
-   notes:result.notes.map(n=>({...n}))
+   notes:result.notes.map(n=>({...n})),
+   performance:localPerformanceFromText(prompt)
  };
  if(box)box.innerHTML=`<div class="ai-success">
    <b>${esc(aiPendingFormula.name)}</b>
    <p>${esc(aiPendingFormula.rationale)}</p>
    <div class="ai-note-tags">${aiPendingFormula.notes.map(n=>{const m=MATERIALS.find(x=>x.id===n.id);return `<span>${m.name} ${n.pct}%</span>`}).join('')}</div>
+   ${aiPerformanceHTML(aiPendingFormula.performance)}
    <small class="backend-help">تم استخدام المحرك المحلي لأن Backend غير متاح.</small>
    <button class="primary wide-btn" onclick="applyPendingAIFormula()">اعتماد الوصفة وفتحها في المختبر</button>
  </div>`;
@@ -715,7 +720,8 @@ function applyPendingAIFormula(){
    mood:String(aiPendingFormula.mood||''),
    occasion:String(aiPendingFormula.occasion||''),
    gender:db.draft.gender||'للجميع',
-   notes:aiPendingFormula.notes.map(n=>({id:n.id,pct:Number(n.pct)||0}))
+   notes:aiPendingFormula.notes.map(n=>({id:n.id,pct:Number(n.pct)||0})),
+   aiPerformance:aiPendingFormula.performance?{...aiPendingFormula.performance}:null
  };
  save();
  aiPendingFormula=null;
@@ -724,6 +730,15 @@ function applyPendingAIFormula(){
 }
 window.applyPendingAIFormula=applyPendingAIFormula;
 
+function localPerformanceFromText(text){
+ const t=String(text||'').toLowerCase();
+ let classId='edp',projection='medium',concentration=20,longevity=8,reason='توازن عام بين الثبات والفوحان حسب وصفك.';
+ if(/خفيف|ناعم|صيف|نهاري|منعش|كولونيا/.test(t)){classId='edt';projection='soft';concentration=12;longevity=5;reason='الوصف يميل لعطر أخف وأنسب للنهار أو الأجواء الدافئة.'}
+ if(/قوي|فواح|فوحان|مسائي|سبايسي|شرقي/.test(t)){classId='edp';projection='strong';concentration=22;longevity=8;reason='الوصف يطلب حضورًا أوضح وفوحانًا أقوى مع ثبات جيد.'}
+ if(/ثابت|ثبات|عود|دخاني|ثقيل|مركز|نقي|بارفيوم/.test(t)){classId='perfume';projection=/فواح|قوي/.test(t)?'strong':'medium';concentration=/شديد|قوي جدًا|مركز/.test(t)?35:30;longevity=12;reason='الوصف يميل لقاعدة أثقل وثبات أطول، لذلك رُفع تركيز الخلاصة.'}
+ if(/قوي جدًا|فوحان قوي جدًا/.test(t))projection='very-strong';
+ return {classId,projection,concentration,longevity,reason};
+}
 function buildSmartPerfume(text){
  const lower=String(text||'').toLowerCase();
  let ids=['bergamot','neroli','lavender','cedar','sandal','musk'];
@@ -777,7 +792,7 @@ function generateLocalAI(text,openLab=false){
 function askAIFromCreate(){aiRequestMode='new';const idea=document.getElementById('idea')?.value?.trim();db.draft.name=document.getElementById('fName')?.value||db.draft.name;db.draft.mood=document.getElementById('fMood')?.value||db.draft.mood;db.draft.occasion=document.getElementById('fOcc')?.value||db.draft.occasion;save();setRoute('assistant');if(idea)setTimeout(()=>{const p=document.getElementById('aiPrompt');if(p)p.value=idea;askPerfumeAI(idea)},30)}
 function openAIReview(){aiRequestMode='review';const d=`راجع هذه التركيبة الحالية وطورها مع الحفاظ على فكرتها: ${db.draft.name||'بدون اسم'}، الطابع ${db.draft.mood}، الاستخدام ${db.draft.occasion}. المواد الحالية: ${db.draft.notes.map(n=>{const m=MATERIALS.find(x=>x.id===n.id);return m.name+' '+n.pct+'%'}).join('، ')}. أعطني نسخة أكثر توازنًا وثباتًا من نفس مواد المكتبة.`;setRoute('assistant');setTimeout(()=>{const p=document.getElementById('aiPrompt');if(p)p.value=d},30)}
 function render(){view.innerHTML=({home,create,lab,materials,formulas,knowledge,pyramid,favorites,profile,settings,backend:backendPage,supplies,clone:clonePerfume,assistant}[route]||home)();bindDraftInputs()}
-function bindDraftInputs(){['fName','fMood','fOcc'].forEach(id=>{const e=document.getElementById(id);if(!e)return;e.onchange=()=>{if(id==='fName')db.draft.name=e.value;if(id==='fMood')db.draft.mood=e.value;if(id==='fOcc')db.draft.occasion=e.value;save()}});if(route==='lab')requestAnimationFrame(()=>calcBatch())}
+function bindDraftInputs(){['fName','fMood','fOcc'].forEach(id=>{const e=document.getElementById(id);if(!e)return;e.onchange=()=>{if(id==='fName')db.draft.name=e.value;if(id==='fMood')db.draft.mood=e.value;if(id==='fOcc')db.draft.occasion=e.value;save()}});if(route==='lab')requestAnimationFrame(()=>{const p=db.draft.aiPerformance;if(p){setSelectValue('batchClass',p.classId);setSelectValue('conc',nearestConc(p.concentration));setSelectValue('batchLongevity',longevitySelectValue(p.longevity));setSelectValue('batchProjection',p.projection);setSelectValue('perfConc',nearestConc(p.concentration));setSelectValue('perfProjection',p.projection);const l=document.getElementById('perfLongevity');if(l)l.value=String(p.longevity>=12?12:p.longevity>=10?10:p.longevity>=8?8:p.longevity>=6?6:4)}calcBatch()})}
 function totalPct(){return Math.round(db.draft.notes.reduce((a,n)=>a+Number(n.pct||0),0)*10)/10}
 function updatePct(i,v){db.draft.notes[i].pct=Math.max(0,Number(v)||0);save();render()}
 function removeNote(i){db.draft.notes.splice(i,1);save();render()}
