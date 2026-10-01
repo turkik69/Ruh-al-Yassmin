@@ -1,4 +1,3 @@
-
 const GEMINI_MODEL=process.env.GEMINI_MODEL||'gemini-3.5-flash-lite';
 function geminiUrl(){
   return 'https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(GEMINI_MODEL)+':generateContent';
@@ -11,7 +10,6 @@ function parseJsonText(text){
   const first=clean.indexOf('{'),last=clean.lastIndexOf('}');
   return JSON.parse(first>=0&&last>first?clean.slice(first,last+1):clean);
 }
-
 function imagePartFromDataUrl(image){
   if(!image||typeof image!=='string')return null;
   const m=image.match(/^data:([^;]+);base64,(.+)$/);
@@ -25,23 +23,46 @@ function geminiSources(raw){
     const w=c?.web;if(!w?.uri||seen.has(w.uri))continue;
     seen.add(w.uri);out.push({title:w.title||w.uri,url:w.uri});
   }
-  return out.slice(0,6);
+  return out.slice(0,10);
+}
+function decodeHtml(s=''){
+  return String(s).replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>');
+}
+function metaValue(html,key){
+  const escaped=key.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  const a=new RegExp('<meta[^>]+(?:property|name)=["\\']'+escaped+'["\\'][^>]+content=["\\']([^"\\']+)["\\'][^>]*>','i');
+  const b=new RegExp('<meta[^>]+content=["\\']([^"\\']+)["\\'][^>]+(?:property|name)=["\\']'+escaped+'["\\'][^>]*>','i');
+  return decodeHtml((html.match(a)||html.match(b)||[])[1]||'');
+}
+async function fetchPageMeta(url){
+  try{
+    const r=await fetch(url,{headers:{'User-Agent':'Mozilla/5.0 RuhAlYassmin/2.0'},redirect:'follow'});
+    if(!r.ok)return null;
+    const type=String(r.headers.get('content-type')||'');
+    if(!type.includes('text/html'))return null;
+    const html=(await r.text()).slice(0,700000);
+    let image=metaValue(html,'og:image')||metaValue(html,'twitter:image')||metaValue(html,'twitter:image:src');
+    const title=metaValue(html,'og:title')||decodeHtml((html.match(/<title[^>]*>([^<]{1,250})<\/title>/i)||[])[1]||'');
+    if(!image){
+      const j=html.match(/"image"\s*:\s*(?:\[\s*)?["'](https?:\\?\/\\?\/[^"']+)["']/i);
+      if(j?.[1])image=j[1].replace(/\\\//g,'/');
+    }
+    if(image){try{image=new URL(image,r.url||url).href}catch{}}
+    return {url:r.url||url,title,image};
+  }catch{return null}
+}
+function words(s){
+  return String(s||'').toLowerCase().normalize('NFKD').replace(/[^a-z0-9\u0600-\u06ff]+/g,' ').trim().split(/\s+/).filter(x=>x.length>1);
+}
+function candidateScore(candidate,meta){
+  const wanted=new Set(words([candidate.brand,candidate.product_name,candidate.concentration,candidate.year].filter(Boolean).join(' ')));
+  const hay=new Set(words((meta?.title||'')+' '+(meta?.url||'')));
+  let score=0;for(const w of wanted)if(hay.has(w))score++;
+  return score;
 }
 async function findReferenceImage(sources){
-  const urls=(sources||[]).map(x=>x?.url).filter(Boolean).slice(0,4);
-  for(const url of urls){
-    try{
-      const r=await fetch(url,{headers:{'User-Agent':'Mozilla/5.0 RuhAlYassmin/1.0'},redirect:'follow'});
-      if(!r.ok)continue;
-      const html=(await r.text()).slice(0,500000);
-      const m=html.match(/<meta[^>]+(?:property|name)=["'](?:og:image|twitter:image(?::src)?)["'][^>]+content=["']([^"']+)["'][^>]*>/i)
-        || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["'](?:og:image|twitter:image(?::src)?)["'][^>]*>/i);
-      if(m?.[1]){
-        try{return new URL(m[1],url).href}catch{return m[1]}
-      }
-    }catch{}
-  }
-  return '';
+  const metas=await Promise.all((sources||[]).slice(0,6).map(x=>fetchPageMeta(x?.url)));
+  return metas.find(x=>x?.image)?.image||'';
 }
 async function callGeminiRobust(parts,{search=true,maxOutputTokens=1200,temperature=.2}={}){
   const makeBody=(withSearch)=>({
@@ -65,6 +86,37 @@ async function callGeminiRobust(parts,{search=true,maxOutputTokens=1200,temperat
   }
   return {r,raw};
 }
+async function exactCandidateImage(candidate){
+  try{
+    const q=[candidate.brand,candidate.product_name,candidate.concentration,candidate.year].filter(Boolean).join(' ');
+    const prompt='Find the exact perfume product page or a reputable perfume database page for: '+q+'. Focus on the exact edition and bottle. Reply with one short sentence only.';
+    const {r,raw}=await callGeminiRobust([{text:prompt}],{search:true,maxOutputTokens:80,temperature:0});
+    if(!r.ok)return '';
+    return await findReferenceImage(geminiSources(raw));
+  }catch{return ''}
+}
+async function enrichCandidateImages(candidates,initialSources){
+  const sourceMetas=(await Promise.all((initialSources||[]).slice(0,8).map(x=>fetchPageMeta(x?.url)))).filter(Boolean);
+  const out=candidates.map(x=>({...x,image_url:''}));
+  for(const c of out){
+    let best=null,bestScore=0;
+    for(const m of sourceMetas){
+      const score=candidateScore(c,m);
+      if(m?.image&&score>bestScore){best=m;bestScore=score}
+    }
+    if(bestScore>=2)c.image_url=best.image;
+  }
+  let next=0;
+  async function worker(){
+    while(next<out.length){
+      const i=next++;
+      if(out[i].image_url)continue;
+      out[i].image_url=await exactCandidateImage(out[i]);
+    }
+  }
+  await Promise.all([worker(),worker()]);
+  return out;
+}
 export default async function handler(req,res){
   res.setHeader('Access-Control-Allow-Origin','*');
   res.setHeader('Access-Control-Allow-Headers','Content-Type');
@@ -83,12 +135,12 @@ export default async function handler(req,res){
   const selected=req.body?.selected||null;
 
   if(mode==='search'&&name&&!image){
-    const prompt='أنت باحث متخصص في العطور. ابحث على الويب عن جميع المنتجات المحتملة التي تطابق الاسم: "'+name+'". أعد JSON فقط بالشكل {"mode":"candidates","query":"'+name+'","candidates":[{"brand":"","product_name":"","concentration":"","year":"","disambiguation":""}]}. أعط حتى 10 نتائج حقيقية مختلفة ولا تكرر نفس المنتج، وافصل الإصدارات المختلفة.';
-    const {r,raw}=await callGeminiRobust([{text:prompt}],{search:true,maxOutputTokens:1200,temperature:.2});
+    const prompt='أنت باحث متخصص في العطور. ابحث على الويب عن المنتجات والإصدارات المحتملة التي تطابق الاسم: "'+name+'". ميّز الإصدارات التي تتشابه أسماؤها حسب العلامة والتركيز والسنة. أعد JSON فقط بالشكل {"mode":"candidates","query":"'+name+'","candidates":[{"brand":"","product_name":"","concentration":"","year":"","disambiguation":""}]}. أعط حتى 8 نتائج حقيقية مختلفة ولا تكرر نفس المنتج.';
+    const {r,raw}=await callGeminiRobust([{text:prompt}],{search:true,maxOutputTokens:1400,temperature:.15});
     if(!r.ok)return res.status(r.status).json({error:'GEMINI_ERROR',details:raw?.error?.message||'Search failed',provider:'gemini'});
     try{
       const out=parseJsonText(extractGeminiText(raw));
-      const candidates=(Array.isArray(out.candidates)?out.candidates:[]).slice(0,10).map(x=>({
+      const candidates=(Array.isArray(out.candidates)?out.candidates:[]).slice(0,8).map(x=>({
         brand:String(x.brand||'').slice(0,120),
         product_name:String(x.product_name||'').slice(0,180),
         concentration:String(x.concentration||'').slice(0,80),
@@ -96,8 +148,7 @@ export default async function handler(req,res){
         disambiguation:String(x.disambiguation||'').slice(0,240)
       })).filter(x=>x.product_name);
       const sources=geminiSources(raw);
-      const refImage=await findReferenceImage(sources);
-      const enriched=candidates.map(x=>({...x,image_url:x.image_url||refImage||''}));
+      const enriched=await enrichCandidateImages(candidates,sources);
       return res.status(200).json({mode:'candidates',query:name,candidates:enriched,sources});
     }catch{return res.status(502).json({error:'MODEL_FORMAT',provider:'gemini'});}
   }
@@ -120,7 +171,7 @@ ${selected?'هذا هو المنتج الذي اختاره المستخدم تح
     const out=parseJsonText(extractGeminiText(raw));
     out.clone_notes=(out.clone_notes||[]).filter(n=>materials.includes(n.id)).map(n=>({id:n.id,pct:Number(n.pct)||0}));
     out.sources=geminiSources(raw);
-    out.image_url=String(out.image_url||selected?.image_url||await findReferenceImage(out.sources)||'');
+    out.image_url=String(selected?.image_url||out.image_url||await findReferenceImage(out.sources)||'');
     return res.status(200).json(out);
   }catch{return res.status(502).json({error:'MODEL_FORMAT',provider:'gemini',sources:geminiSources(raw)});}
 }
