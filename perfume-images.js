@@ -12,6 +12,10 @@
     if(!src)return '<span class="perfume-image-fallback" aria-hidden="true">🧴</span>';
     return '<span class="perfume-image-shell"><img class="'+cls+'" src="'+esc(src)+'" alt="'+esc([item?.brand,item?.product_name].filter(Boolean).join(' ')||'صورة العطر')+'" loading="lazy" onerror="this.style.display=\'none\';this.parentElement.classList.add(\'is-fallback\')"><i>🧴</i></span>';
   }
+  function savedThumb(src,alt='العطر'){
+    if(!src)return '';
+    return '<span class="saved-perfume-thumb"><img src="'+esc(src)+'" alt="'+esc(alt)+'"></span>';
+  }
 
   makePerfumeThumb=async function(src,size=96){
     return await directThumb(proxyImage(src),size);
@@ -60,10 +64,30 @@
 
   const baseShowCloneResult=showCloneResult;
   showCloneResult=function(data,archive=true){
-    if(data?.image_url)data={...data,image_url:data.image_url};
     baseShowCloneResult(data,archive);
     const img=document.querySelector('.clone-result-thumb');
     if(img&&/^https?:\/\//i.test(img.getAttribute('src')||''))img.src=proxyImage(img.getAttribute('src'));
+  };
+
+  cloneArchiveHTML=function(){
+    if(!db.cloneArchive.length)return '<div class="empty">لا يوجد سجل بعد. أي بحث أو استنساخ جديد سيظهر هنا تلقائيًا.</div>';
+    return '<div class="clone-archive-list">'+db.cloneArchive.map(x=>{
+      const isResult=x.type==='result',d=x.data||{};
+      const firstCandidate=(x.candidates||[]).find(c=>c.image_url)||{};
+      const title=isResult?([d.brand,d.product_name].filter(Boolean).join(' — ')||'عطر محفوظ'):(x.query||'بحث محفوظ');
+      const sub=isResult?'تركيبة مستوحاة محفوظة':((x.candidates||[]).length+' نتيجة محفوظة');
+      const date=new Date(x.createdAt).toLocaleDateString('ar-OM',{year:'numeric',month:'short',day:'numeric'});
+      const imageSrc=isResult?(d.image_url||''):(firstCandidate.image_url||'');
+      const img=imageSrc?'<span class="archive-perfume-image"><img src="'+esc(proxyImage(imageSrc))+'" alt=""></span>':'';
+      return '<div class="clone-archive-item"><button class="archive-open archive-open-visual" onclick="openCloneArchive(\''+x.id+'\')">'+img+'<div><b>'+esc(title)+'</b><small>'+esc(sub)+' • '+esc(date)+'</small></div><span>فتح ←</span></button><button class="archive-delete" onclick="deleteCloneArchive(\''+x.id+'\')" aria-label="حذف">×</button></div>';
+    }).join('')+'</div>';
+  };
+
+  openProfileFormulas=function(){
+    const box=document.getElementById('profileFormulasArea');if(!box)return;
+    if(!db.formulas.length){box.innerHTML='<div class="empty lux-panel tone-lilac">لا توجد تركيبات محفوظة بعد. احفظ تركيبة من المختبر وستظهر هنا تلقائيًا.</div>';return}
+    box.innerHTML='<section class="lux-panel tone-lilac"><div class="panel-heading"><div><span class="mini-label">تركيباتي</span><h3>التركيبات المحفوظة</h3></div><span class="panel-icon">▤</span></div><div class="profile-formula-list">'+db.formulas.map(f=>'<button class="profile-formula-item profile-formula-visual" onclick="openFormula(\''+f.id+'\')">'+savedThumb(f.sourcePerfumeThumb||'',f.sourcePerfumeName||f.name)+'<div><b>'+esc(f.name||f.baseName||'تركيبة')+' <span>'+esc(f.version||'')+'</span></b><small>'+esc(f.mood||'')+(f.occasion?' • '+esc(f.occasion):'')+' • '+(f.notes?.length||0)+' مواد</small></div><strong>فتح ←</strong></button>').join('')+'</div></section>';
+    box.scrollIntoView({behavior:'smooth',block:'start'});
   };
 
   window.RUH_YASMIN_IMAGE_PROXY=proxyImage;
