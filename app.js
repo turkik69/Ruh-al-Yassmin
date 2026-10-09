@@ -23,6 +23,11 @@ const MATERIALS = [
   {id:'frankincense',name:'لبان',en:'Frankincense',family:'راتنجي بخوري',level:'قاعدة',power:8,life:8,icon:'◈',pairs:['عود','باتشولي','عنبر','فلفل أسود']},
   {id:'neroli',name:'نيرولي',en:'Neroli',family:'زهري حمضي',level:'افتتاحية',power:5,life:4,icon:'✿',pairs:['برغموت','مسك','ياسمين','صندل']}
 ];
+const LAB_AUXILIARIES=[
+ {id:'ethanol96',name:'إيثانول عطري 96%',en:'Perfumers Alcohol / Ethanol 96%',role:'مذيب وقاعدة للعطور الرشاشة',icon:'◌',when:'يضاف بعد اكتمال الخلاصة العطرية للوصول إلى التركيز والحجم النهائي.',note:'قابل للاشتعال. استخدمه في مكان جيد التهوية وبعيدًا عن اللهب والحرارة.'},
+ {id:'dpg',name:'DPG — Dipropylene Glycol',en:'DPG',role:'مخفف/مذيب عطري اختياري',icon:'◇',when:'يستخدم عند الحاجة لتخفيف مادة لزجة أو صعبة الذوبان، أو إذا أوصى مورد المادة بذلك. ليس إلزاميًا لكل عطر.',note:'الإفراط فيه قد يهدئ الفوحان؛ في العطر الكحولي استخدم أقل كمية تحقق الغرض.'},
+ {id:'fixative',name:'مثبت عطري — اختياري',en:'Perfume Fixative',role:'دعم الثبات عند الحاجة',icon:'⬡',when:'لا يلزم تلقائيًا إذا كانت التركيبة غنية بمواد قاعدة ثابتة مثل الباتشولي والعود والصندل والعنبر والمسك. عند استخدام مثبت تجاري اتبع نسبة المورد.',note:'لا توجد نسبة عالمية للمثبت؛ تركيب المنتجات التجارية مختلف، لذلك لا يضاف بجرعة ثابتة.'}
+];
 const PERFUME_CLASSES=[
  {id:'perfume',name:'عطر نقي',en:'Perfume',min:25,max:40,rec:30,hMin:9,hMax:16,projection:'قوي'},
  {id:'edp',name:'ماء عطر',en:'Eau de Parfum',min:15,max:25,rec:20,hMin:6,hMax:9,projection:'متوسط إلى قوي'},
@@ -53,7 +58,9 @@ const SUPPLY_DEFAULTS=[
  {id:'cypriol-oil',category:'زيوت ومواد عطرية',name:'سيبريول / ناغارموثا',qty:20,unit:'ml',note:'زيت عطري داكن ودخاني قريب من أجواء العود والجلد'},
  {id:'guaiac-oil',category:'زيوت ومواد عطرية',name:'خشب الغاياك',qty:20,unit:'ml',note:'خشبي دخاني دافئ ممتاز للقاعدات الداكنة'},
  {id:'frankincense-oil',category:'زيوت ومواد عطرية',name:'لبان',qty:20,unit:'ml',note:'راتنجي بخوري يضيف عمقًا وهيبة للتركيبات الشرقية والخشبية'},
- {id:'ethanol',category:'الكحول والقاعدة',name:'كحول عطري / إيثانول مناسب للعطور',qty:1,unit:'L',note:'اختر درجة مناسبة لصناعة العطور من مورد موثوق'},
+ {id:'ethanol',category:'الكحول والقاعدة',name:'إيثانول عطري 96%',qty:1,unit:'L',note:'قاعدة للعطور الرشاشة؛ مادة شديدة الاشتعال وتستخدم بعيدًا عن الحرارة واللهب'},
+ {id:'dpg',category:'الكحول والقاعدة',name:'DPG — Dipropylene Glycol',qty:500,unit:'ml',note:'مخفف/مذيب اختياري للمواد اللزجة أو الصعبة الذوبان؛ لا يضاف تلقائيًا لكل عطر'},
+ {id:'fixative',category:'الكحول والقاعدة',name:'مثبت عطري تجاري — اختياري',qty:100,unit:'ml',note:'يستخدم فقط عند الحاجة ووفق نسبة وتعليمات المورد؛ لا توجد جرعة ثابتة عامة'},
  {id:'storage-30',category:'زجاجات الحفظ',name:'زجاجات زجاجية داكنة 30 ml',qty:20,unit:'حبة',note:'لحفظ التركيبات والتجارب'},
  {id:'storage-100',category:'زجاجات الحفظ',name:'زجاجات زجاجية داكنة 100 ml',qty:10,unit:'حبة',note:'للدفعات الأكبر'},
  {id:'sample-10',category:'زجاجات الحفظ',name:'زجاجات عينات 10 ml',qty:30,unit:'حبة',note:'للتجارب والمقارنة بين الإصدارات'},
@@ -291,8 +298,20 @@ function lab(){const d=db.draft;return `${pageHero('المختبر','اخلط ا
 <div class="field"><label>الفوحان المطلوب</label><select id="batchProjection" onchange="calcBatch()"><option value="soft">ناعم</option><option value="medium" selected>متوازن</option><option value="strong">قوي</option><option value="very-strong">قوي جدًا</option></select></div>
 <div class="field"><label>حجم العبوة</label><select id="batchSize" onchange="calcBatch()"><option value="10">10 ml</option><option value="30">30 ml</option><option value="50" selected>50 ml</option><option value="100">100 ml</option><option value="200">200 ml</option></select></div>
 <div class="field"><label>نسبة خلاصة العطر</label><select id="conc" onchange="syncBatchFromConcentration()"><option value="5">5%</option><option value="8">8%</option><option value="10">10%</option><option value="12">12%</option><option value="15">15%</option><option value="18">18%</option><option value="20" selected>20%</option><option value="22">22%</option><option value="25">25%</option><option value="30">30%</option><option value="35">35%</option><option value="40">40%</option></select></div>
-</div><div id="batchGuidance"></div><div id="batchResult"></div></section>
+</div><div id="batchGuidance"></div><div id="batchResult"></div>
+<div class="manufacture-launch"><button class="primary wide-btn" onclick="startManufacturingGuide()">ابدأ خطوات تصنيع هذا العطر خطوة بخطوة</button><small>يستخدم التركيبة الحالية وحجم العبوة والتركيز المختار ليعطيك تسلسل الخلط من أول مادة إلى التعبئة.</small></div>
+<div id="manufacturingGuide"></div></section>
 <section class="lux-panel tone-rose"><div class="panel-heading"><div><span class="mini-label">إدارة الإصدارات</span><h3>احفظ تركيبتك</h3></div><span class="panel-icon">📖</span></div><div class="field"><label>ملاحظات النسخة</label><textarea id="versionNotes" placeholder="مثال: قللت الفانيلا وزدت الصندل..."></textarea></div><button class="primary wide-btn" onclick="saveFormula()">حفظ نسخة جديدة V</button></section>`}
+function labAuxiliariesHTML(){
+ return '<section class="lux-panel tone-teal auxiliary-library"><div class="panel-heading"><div><span class="mini-label">مواد مساعدة للتصنيع</span><h3>الكحول • DPG • المثبت</h3></div><span class="panel-icon">⚗</span></div><div class="auxiliary-grid">'+LAB_AUXILIARIES.map(x=>'<button class="auxiliary-card" onclick="labAuxInfo(\''+x.id+'\')"><span>'+x.icon+'</span><div><b>'+esc(x.name)+'</b><small>'+esc(x.role)+'</small></div><strong>متى أستخدمه؟ ←</strong></button>').join('')+'</div></section>';
+}
+function labAuxInfo(id){
+ const x=LAB_AUXILIARIES.find(i=>i.id===id);if(!x)return;
+ const supplyId=id==='ethanol96'?'ethanol':id;
+ const s=db.supplies.find(i=>i.id===supplyId);
+ modalContent.innerHTML='<h3>'+esc(x.name)+'</h3><p>'+esc(x.role)+'</p><div class="aux-info"><b>متى يستخدم؟</b><p>'+esc(x.when)+'</p><b>ملاحظة مهمة</b><p>'+esc(x.note)+'</p></div><div class="material-link-status"><span>المخزون</span><b>'+(s?.bought?formatSupplyAmount(s):'غير مجهز')+'</b></div><div class="actions"><button class="primary" onclick="modal.close();setRoute(\'supplies\')">فتح تجهيز مختبري</button><button class="ghost" onclick="modal.close()">إغلاق</button></div>';
+ modal.showModal();
+}
 function materials(){
  const level=sessionStorage.getItem('ruhMaterialLevel')||'';
  const list=level?MATERIALS.filter(m=>m.level===level):MATERIALS;
@@ -302,7 +321,7 @@ function materials(){
  <section class="lux-panel tone-lilac library-search"><div class="field"><label>ابحث في مكتبة روح الياسمين</label><input id="matSearch" oninput="filterMaterials(this.value)" placeholder="اسم المادة، العائلة، أو طبقة الهرم..."></div>
  <div class="material-level-filters"><button onclick="filterMaterials('')">الكل</button><button onclick="filterMaterials('افتتاحية')">افتتاحية</button><button onclick="filterMaterials('قلب')">قلب</button><button onclick="filterMaterials('قاعدة')">قاعدة</button></div>
  <div class="library-count">${list.length} مادة عطرية${level?' • '+level:''}</div></section>
- <div id="materialList" class="material-list material-cards">${materialsHTML(list)}</div>`
+ ${labAuxiliariesHTML()}<div id="materialList" class="material-list material-cards">${materialsHTML(list)}</div>`
 }
 function materialsHTML(arr){return arr.map((m,i)=>`<div class="material material-premium mat-${['pink','teal','lilac','gold'][i%4]}"><button class="material-icon material-icon-btn" onclick="materialInfo('${m.id}')" aria-label="تفاصيل ${m.name}">${m.icon}</button><div><h4>${m.name} <small>${m.en}</small></h4><p>${m.level} • ${m.family}</p><div class="material-bars"><span>قوة ${m.power}/10</span><span>ثبات ${m.life}/10</span></div></div><button onclick="materialInfo('${m.id}')">تفاصيل</button></div>`).join('')}
 function formulas(){return `${pageHero('تركيباتي','دفتر تركيباتك الخاصة وإصدارات V1 وV2 وV3','▤','gold')}
@@ -445,7 +464,7 @@ async function testGeminiBackend(){
  }
 }
 
-function isConsumableSupply(item){return item.category==='زيوت ومواد عطرية'||item.id==='ethanol'}
+function isConsumableSupply(item){return item.category==='زيوت ومواد عطرية'||['ethanol','dpg','fixative'].includes(item.id)}
 function stockPercent(item){if(!item.bought)return 0;const cap=Number(item.capacity||item.qty||0);if(!cap)return 0;return Math.max(0,Math.min(100,Math.round((Number(item.remaining||0)/cap)*100)))}
 function supplyBottle(item){
  if(!isConsumableSupply(item))return '';
@@ -916,6 +935,60 @@ function applyPerformancePlan(){
  const fix=100-db.draft.notes.reduce((sum,n)=>sum+n.pct,0);db.draft.notes[db.draft.notes.length-1].pct=Math.round((db.draft.notes[db.draft.notes.length-1].pct+fix)*10)/10;
  save();pendingPerformancePlan=null;render();toast('تم تطبيق اقتراحات الأداء على التركيبة');
 }
+
+function manufacturingProfile(){
+ const size=Number(document.getElementById('batchSize')?.value||50);
+ const conc=Number(document.getElementById('conc')?.value||20);
+ const projection=document.getElementById('batchProjection')?.value||'medium';
+ const longevity=Number(document.getElementById('batchLongevity')?.value||8);
+ const oil=size*conc/100;
+ const heavyIds=new Set(['patchouli','oud','amber','vanilla','musk','leather','cypriol','guaiac','frankincense','sandal']);
+ const heavyCount=db.draft.notes.filter(n=>heavyIds.has(n.id)).length;
+ const basePct=currentLevelPct('قاعدة');
+ let dpgPct=0;
+ let dpgReason='لا توجد حاجة واضحة لإضافة DPG تلقائيًا.';
+ if(heavyCount>=3||conc>=30){
+   dpgPct=1;
+   dpgReason='التركيبة ثقيلة/مركزة؛ يمكن استخدام كمية صغيرة من DPG فقط إذا كانت لديك مادة لزجة أو صعبة الذوبان، أو إذا أوصى المورد بذلك.';
+ }
+ const dpgMl=size*dpgPct/100;
+ const ethanolMl=Math.max(0,size-oil-dpgMl);
+ const hasFixativeBases=db.draft.notes.some(n=>['patchouli','oud','amber','sandal','musk','vetiver','cypriol','frankincense'].includes(n.id));
+ const needFixative=!hasFixativeBases&&longevity>=8&&basePct<30;
+ const fixativeAdvice=needFixative
+   ?'قد تحتاج دعمًا للثبات لأن القاعدة الحالية خفيفة. الأفضل أولًا تقوية القاعدة بمادة عطرية مناسبة؛ وإذا استخدمت مثبتًا تجاريًا فالتزم بنسبة المورد ولا تستخدم جرعة عامة ثابتة.'
+   :'لا يظهر احتياج واضح لمثبت منفصل؛ مواد القاعدة الحالية تؤدي دور التثبيت بدرجة جيدة. لا تضف مثبتًا تجاريًا إلا إذا كان لديك سبب محدد وتعليمات مورد.';
+ return {size,conc,projection,longevity,oil,dpgPct,dpgMl,ethanolMl,heavyCount,basePct,needFixative,dpgReason,fixativeAdvice};
+}
+function manufacturingOrderedNotes(oil){
+ const order={قاعدة:0,قلب:1,افتتاحية:2};
+ return db.draft.notes.map(n=>{const m=MATERIALS.find(x=>x.id===n.id);return {...n,m,ml:oil*(Number(n.pct||0)/100)}})
+   .sort((a,b)=>(order[a.m?.level]??9)-(order[b.m?.level]??9));
+}
+function startManufacturingGuide(){
+ if(!db.draft.notes.length)return toast('أضف مواد للتركيبة أولاً');
+ if(Math.abs(totalPct()-100)>.2)return toast('وازن نسب الخلاصة إلى 100% أولاً');
+ calcBatch();
+ const p=manufacturingProfile();
+ const ordered=manufacturingOrderedNotes(p.oil);
+ const box=document.getElementById('manufacturingGuide');if(!box)return;
+ const steps=[];
+ steps.push('<div class="mix-step"><span class="step-no">1</span><div><b>جهّز الأدوات والعبوة</b><p>استخدم زجاجًا نظيفًا وجافًا، ماصة/سرنجة مدرجة أو ميزانًا مناسبًا. اعمل في مكان جيد التهوية وبعيدًا تمامًا عن النار والشرر لأن الإيثانول 96% شديد الاشتعال.</p></div></div>');
+ let step=2;
+ for(const x of ordered){
+   const lvl=x.m?.level||'';
+   steps.push('<div class="mix-step"><span class="step-no">'+step+++'</span><div><b>أضف '+esc(x.m?.name||x.id)+' — '+x.ml.toFixed(2)+' ml</b><p>'+esc(lvl)+' • '+Number(x.pct).toFixed(1)+'% من الخلاصة العطرية. أضف المادة بهدوء وحرّك برفق قبل الانتقال للمادة التالية.</p></div></div>');
+ }
+ steps.push('<div class="mix-step optional '+(p.dpgPct?'recommended':'')+'"><span class="step-no">'+step+++'</span><div><b>DPG — '+(p.dpgPct?p.dpgMl.toFixed(2)+' ml اختياري':'لا يضاف افتراضيًا')+'</b><p>'+esc(p.dpgReason)+' إذا قررت استخدامه في العطر الرشاش فهو يحل محل نفس الحجم من الإيثانول حتى يبقى الحجم النهائي '+p.size+' ml.</p></div></div>');
+ steps.push('<div class="mix-step optional '+(p.needFixative?'recommended':'')+'"><span class="step-no">'+step+++'</span><div><b>هل تحتاج مثبتًا عطريًا؟</b><p>'+esc(p.fixativeAdvice)+'</p></div></div>');
+ steps.push('<div class="mix-step"><span class="step-no">'+step+++'</span><div><b>اترك الخلاصة تتجانس قليلًا</b><p>بعد إنهاء المواد العطرية وDPG إن استخدمته، حرّك برفق واترك الخليط في وعاء مغلق فترة قصيرة حتى يتجانس قبل التخفيف بالكحول.</p></div></div>');
+ steps.push('<div class="mix-step ethanol"><span class="step-no">'+step+++'</span><div><b>أضف إيثانول 96% تدريجيًا — '+p.ethanolMl.toFixed(2)+' ml</b><p>أضفه على دفعات إلى الخلاصة مع تحريك لطيف. الحساب مبني على حجم '+p.size+' ml وتركيز خلاصة '+p.conc+'%'+(p.dpgPct?' مع DPG '+p.dpgPct+'%':'')+'. لا تضف ماءً عشوائيًا لأن بعض التركيبات قد تتعكر.</p></div></div>');
+ steps.push('<div class="mix-step"><span class="step-no">'+step+++'</span><div><b>الراحة والنضج</b><p>أغلق العبوة واحفظها بعيدًا عن الضوء والحرارة. ابدأ التقييم بعد عدة أيام، وغالبًا تتحسن الصورة العطرية خلال 1–2 أسبوع وقد تحتاج بعض التركيبات وقتًا أطول.</p></div></div>');
+ steps.push('<div class="mix-step"><span class="step-no">'+step+++'</span><div><b>افحص الصفاء ثم عبّئ</b><p>إذا ظهرت عكارة أو رواسب، لا تضف مزيدًا من المذيبات عشوائيًا؛ اختبر عينة صغيرة أولًا ويمكن ترشيحها عند الحاجة. دوّن التاريخ والتركيز والإصدار على الملصق.</p></div></div>');
+ box.innerHTML='<section class="manufacturing-guide"><div class="panel-heading"><div><span class="mini-label">دليل تصنيع مخصص لهذه التركيبة</span><h3>'+esc(db.draft.name||'العطر الحالي')+'</h3></div><span class="panel-icon">🧪</span></div><div class="mix-summary"><div><span>الحجم النهائي</span><b>'+p.size+' ml</b></div><div><span>الخلاصة العطرية</span><b>'+p.oil.toFixed(2)+' ml</b></div><div><span>إيثانول 96%</span><b>'+p.ethanolMl.toFixed(2)+' ml</b></div><div><span>DPG</span><b>'+(p.dpgPct?p.dpgMl.toFixed(2)+' ml اختياري':'غير مطلوب افتراضيًا')+'</b></div></div><div class="mix-order-note"><b>ترتيب عملي مقترح:</b> القاعدة ← القلب ← الافتتاحية. هذا ترتيب عمل يساعدك على المتابعة وليس شرطًا كيميائيًا لصحة العطر؛ الأهم القياس الدقيق والمزج الجيد.</div><div class="mix-step-list">'+steps.join('')+'</div><div class="safety-note manufacturing-safety">للمنتج الجلدي: راجع حدود IFRA وSDS وتعليمات المورد لكل مادة. اختبر دفعة صغيرة أولًا، ولا تعتمد على وصفة التطبيق كإثبات سلامة نهائي.</div></section>';
+ box.scrollIntoView({behavior:'smooth',block:'start'});
+}
+window.startManufacturingGuide=startManufacturingGuide;
 
 let pendingBatch=null;
 function materialSupplyId(materialId){return materialId+'-oil'}
