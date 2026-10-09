@@ -81,12 +81,14 @@ for(const def of SUPPLY_DEFAULTS){
  }
 }
 if(!Array.isArray(db.usageHistory))db.usageHistory=[];
+if(!Array.isArray(db.batchJournal))db.batchJournal=[];
+if(!db.readiness)db.readiness={safetyDocs:false,ventilation:false,noFlame:false,toolsClean:false};
 if(!Array.isArray(db.cloneArchive))db.cloneArchive=[];
 if(!Array.isArray(db.shoppingList))db.shoppingList=[];
 if(db.draft&&db.draft.aiPerformance===undefined)db.draft.aiPerformance=null;
 if(!db.backend)db.backend={enabled:true,url:'https://ruh-al-yassmin.vercel.app',lastStatus:'unknown'};
 if(!db.backend.url)db.backend.url='https://ruh-al-yassmin.vercel.app';
-const ROUTES=['home','create','lab','materials','formulas','knowledge','pyramid','favorites','profile','settings','backend','supplies','clone','assistant'];
+const ROUTES=['home','create','lab','materials','formulas','knowledge','pyramid','favorites','profile','settings','backend','supplies','clone','assistant','readiness'];
 let route=ROUTES.includes(sessionStorage.getItem('ruhYasminRoute'))?sessionStorage.getItem('ruhYasminRoute'):'home';
 let routeHistory=(()=>{try{const x=JSON.parse(sessionStorage.getItem('ruhYasminHistory')||'[]');return Array.isArray(x)?x.filter(r=>ROUTES.includes(r)):[]}catch{return []}})();
 const view=document.getElementById('view');
@@ -393,10 +395,51 @@ function openProfileFormulas(){
 }
 function settings(){return `${pageHero('الإعدادات','إدارة تجربة التطبيق والاتصال بالخادم','⚙','lilac')}
 <section class="settings-menu">
+ <button type="button" class="setting-card readiness-setting" onclick="setRoute('readiness')"><span class="setting-icon">✓</span><div><b>جاهزية التصنيع</b><small>فحص التركيبة والمخزون والسلامة قبل بدء أي دفعة</small></div><span class="setting-arrow">←</span></button>
  <button type="button" class="setting-card backend-setting" onclick="openBackendSettings()"><span class="setting-icon">☁</span><div><b>Backend</b><small>تشغيل وفحص خادم الذكاء الاصطناعي والتعرف على العطور</small></div><span class="setting-arrow">←</span></button>
- <section class="lux-panel tone-lilac"><div class="panel-heading"><div><span class="mini-label">التطبيق</span><h3>روح الياسمين</h3></div><span class="panel-icon">⚙</span></div><p>يتم حفظ تركيباتك وقائمة مشتريات المختبر محليًا على هذا الجهاز.</p><div class="actions"><button type="button" class="ghost" onclick="toggleAppTheme()">تبديل المظهر</button></div></section>
+ <section class="lux-panel tone-lilac"><div class="panel-heading"><div><span class="mini-label">التطبيق</span><h3>روح الياسمين</h3></div><span class="panel-icon">⚙</span></div><p>يتم حفظ تركيباتك وقائمة مشتريات المختبر محليًا على هذا الجهاز.</p><div class="actions"><button type="button" class="ghost" onclick="toggleAppTheme()">تبديل المظهر</button><button type="button" class="ghost" onclick="exportAppData()">نسخة احتياطية</button><label class="ghost import-data-btn">استعادة نسخة<input type="file" accept="application/json" onchange="importAppData(this)"></label></div></section>
 </section>`}
 
+function readinessItems(){
+ const hasTop=currentLevelPct('افتتاحية')>0,hasHeart=currentLevelPct('قلب')>0,hasBase=currentLevelPct('قاعدة')>0;
+ const formulaReady=db.draft.notes.length>=3&&Math.abs(totalPct()-100)<=.2;
+ const ethanol=db.supplies.find(x=>x.id==='ethanol'),bottles=db.supplies.some(x=>x.bought&&x.category==='زجاجات الحفظ');
+ const stockOk=db.draft.notes.length>0&&db.draft.notes.every(n=>db.supplies.find(x=>x.id===materialSupplyId(n.id))?.bought);
+ return [
+  {id:'formula',label:'التركيبة مكتملة ومجموعها 100%',ok:formulaReady,auto:true},
+  {id:'pyramid',label:'توجد بنية عطرية مناسبة من طبقات الهرم',ok:hasTop&&hasHeart&&hasBase,auto:true,warn:!(hasTop&&hasHeart&&hasBase)},
+  {id:'stock',label:'كل مواد التركيبة مسجلة في المخزون',ok:stockOk,auto:true},
+  {id:'ethanol',label:'إيثانول عطري 96% متوفر',ok:!!ethanol?.bought,auto:true},
+  {id:'bottle',label:'زجاجة حفظ/عينة متوفرة',ok:bottles,auto:true},
+  {id:'toolsClean',label:'الأدوات والعبوة نظيفة وجافة',ok:!!db.readiness.toolsClean},
+  {id:'ventilation',label:'مكان العمل جيد التهوية',ok:!!db.readiness.ventilation},
+  {id:'noFlame',label:'لا توجد نار/شرر/مصادر حرارة قرب الإيثانول',ok:!!db.readiness.noFlame},
+  {id:'safetyDocs',label:'راجعت IFRA/SDS وتعليمات المورد للمواد المستخدمة',ok:!!db.readiness.safetyDocs}
+ ];
+}
+function readinessPage(){
+ const items=readinessItems(),done=items.filter(x=>x.ok).length,pct=Math.round(done/items.length*100);
+ return `${pageHero('جاهزية التصنيع','بوابة فحص قبل بدء أي تجربة فعلية','✓','teal')}
+ <section class="readiness-score lux-panel tone-teal"><div><span class="mini-label">درجة الجاهزية الحالية</span><h3>${pct}%</h3><p>${pct===100?'جاهز لبدء دفعة تجريبية صغيرة مع الالتزام ببيانات المورد.':'أكمل البنود الناقصة قبل بدء الخلط.'}</p></div><div class="readiness-ring" style="--p:${pct}"><b>${done}/${items.length}</b></div></section>
+ <section class="readiness-list">${items.map(x=>'<div class="readiness-item '+(x.ok?'done':'pending')+'"><span>'+(x.ok?'✓':'!')+'</span><div><b>'+esc(x.label)+'</b><small>'+(x.auto?'يتم فحصه تلقائيًا من بيانات التطبيق':'تأكيد يدوي قبل العمل الفعلي')+'</small></div>'+(x.auto?'':'<button onclick="toggleReadiness(\''+x.id+'\')">'+(x.ok?'إلغاء':'تأكيد')+'</button>')+'</div>').join('')}</section>
+ <section class="lux-panel tone-gold readiness-note"><b>مهم قبل التصنيع</b><p>التطبيق يساعدك في التنظيم والحساب، لكنه لا يستطيع معرفة تركيز المادة الخام أو نوع المستخلص أو حدود المورد تلقائيًا. الاسم مثل «قرفة» أو «برغموت» لا يكفي للحكم على السلامة؛ راجع العبوة وSDS وIFRA للمادة التي اشتريتها فعلًا.</p></section>
+ <section class="lux-panel tone-lilac"><div class="actions"><button class="primary" onclick="setRoute('lab')">فتح المختبر</button><button class="secondary" onclick="setRoute('supplies')">فتح المخزون</button></div></section>`;
+}
+function toggleReadiness(id){if(!(id in db.readiness))return;db.readiness[id]=!db.readiness[id];save();renderKeepScroll()}
+function exportAppData(){
+ const payload={app:'Ruh Al Yassmin',version:47,exportedAt:new Date().toISOString(),data:db};
+ const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+ const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='ruh-al-yassmin-backup-'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+async function importAppData(input){
+ const file=input.files?.[0];if(!file)return;
+ try{
+  const parsed=JSON.parse(await file.text());const next=parsed?.data||parsed;
+  if(!next||!Array.isArray(next.formulas)||!next.draft)throw new Error('BAD_BACKUP');
+  db=next;save();toast('تمت استعادة النسخة الاحتياطية');setRoute('home');
+ }catch{toast('ملف النسخة الاحتياطية غير صالح')}
+}
+window.exportAppData=exportAppData;window.importAppData=importAppData;
 function backendPage(){
  const status=db.backend.lastStatus||'unknown';
  return `${pageHero('Backend','إدارة الاتصال بالخادم السحابي لميزات الذكاء الاصطناعي','☁','teal')}
@@ -482,6 +525,7 @@ function supplies(){
  <section class="supply-summary"><div><span>تم الشراء</span><b>${bought}/${db.supplies.length}</b></div><div class="progress"><span style="width:${Math.round(bought/db.supplies.length*100)}%"></span></div></section>
  <div class="supply-note">عند تحديد الزيت أو الكحول بأنه تم شراؤه، تظهر الزجاجة ممتلئة حسب الكمية المسجلة. عند تنفيذ دفعة عطر من المختبر، يخصم التطبيق الاستهلاك تلقائيًا من المخزون.</div>
  ${categories.map(cat=>`<section class="supply-group"><div class="section-title"><h3>${cat}</h3><span>${db.supplies.filter(x=>x.category===cat).length} عناصر</span></div><div class="supply-list">${db.supplies.filter(x=>x.category===cat).map(item=>`<div class="supply-item ${item.bought?'done':''} ${isConsumableSupply(item)?'tracked':''}"><button class="supply-check" onclick="toggleSupply('${item.id}')">${item.bought?'✓':''}</button>${supplyBottle(item)}<div class="supply-copy"><b>${item.name}</b><small>${item.note}</small>${isConsumableSupply(item)&&item.bought?`<em class="remaining-text">المتبقي: ${formatSupplyAmount(item)} من ${item.capacity} ${item.unit}</em>`:''}</div><div class="supply-qty"><input type="number" min="0" step="${item.unit==='L'?'0.1':'1'}" value="${item.qty}" onchange="updateSupplyQty('${item.id}',this.value)"><span>${item.unit}</span></div></div>`).join('')}</div></section>`).join('')}
+ ${db.batchJournal.length?`<section class="usage-history batch-journal"><div class="section-title"><h3>دفعات التجربة والنضج</h3><span>${db.batchJournal.length}</span></div>${db.batchJournal.slice(0,8).map(h=>`<button class="history-row journal-row" onclick="openBatchJournal('${h.id}')"><div><b>${esc(h.code)} • ${esc(h.name)}</b><small>${new Date(h.date).toLocaleDateString('ar-OM')} • ${h.size} ml • ${h.conc}%</small></div><span>${h.status||'قيد النضج'} ←</span></button>`).join('')}</section>`:''}
  ${db.usageHistory.length?`<section class="usage-history"><div class="section-title"><h3>آخر عمليات الخصم</h3><span>${db.usageHistory.length}</span></div>${db.usageHistory.slice(0,5).map(h=>`<div class="history-row"><div><b>${esc(h.name)}</b><small>${new Date(h.date).toLocaleString('ar-OM')}</small></div><span>${h.size} ml</span></div>`).join('')}</section>`:''}
  <div class="actions supply-actions"><button class="ghost" onclick="resetSupplies()">إعادة الكميات المقترحة</button><button class="primary" onclick="markAllSupplies(false)">إلغاء علامات الشراء</button></div>`}
 function toggleSupply(id){
@@ -519,12 +563,18 @@ function clonePerfume(){return `${pageHero('استنساخ عطر','صوّر ا�
  ${cloneArchiveHTML()}
 </section>
 <section class="clone-info lux-panel tone-lilac"><b>مهم</b><p>المصادر العامة تنشر عادة النوتات والـaccords، وليس الصيغة التجارية الدقيقة. لذلك سيصنع لك روح الياسمين نسخة <strong>مستوحاة</strong> وقابلة للتعديل داخل مختبرك، وليس نسخة مصنع مطابقة.</p></section>`}
-function previewPerfumePhoto(input){
+async function previewPerfumePhoto(input){
  const file=input.files?.[0];if(!file)return;
- if(file.size>8*1024*1024)return toast('اختر صورة أصغر من 8 MB');
- const reader=new FileReader();
- reader.onload=()=>{cloneImageData=String(reader.result||'');const p=document.getElementById('clonePreview');if(p)p.innerHTML=`<img src="${cloneImageData}" alt="صورة العطر"><button onclick="clearClonePhoto()">×</button>`};
- reader.readAsDataURL(file);
+ if(file.size>12*1024*1024)return toast('اختر صورة أصغر من 12 MB');
+ try{
+  const raw=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(String(r.result||''));r.onerror=reject;r.readAsDataURL(file)});
+  const img=await loadImageAsset(raw);
+  const max=1200,scale=Math.min(1,max/Math.max(img.width,img.height));
+  const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(img.width*scale));canvas.height=Math.max(1,Math.round(img.height*scale));
+  canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+  cloneImageData=canvas.toDataURL('image/jpeg',.82);
+  const p=document.getElementById('clonePreview');if(p)p.innerHTML=`<img src="${cloneImageData}" alt="صورة العطر"><button onclick="clearClonePhoto()">×</button>`;
+ }catch{return toast('تعذر تجهيز الصورة، جرّب صورة أخرى')}
 }
 function clearClonePhoto(){cloneImageData='';const cam=document.getElementById('perfumeCamera');const gal=document.getElementById('perfumeGallery');if(cam)cam.value='';if(gal)gal.value='';const p=document.getElementById('clonePreview');if(p)p.innerHTML=''}
 async function loadImageAsset(src){
@@ -856,7 +906,7 @@ function generateLocalAI(text,openLab=false){
 }
 function askAIFromCreate(){aiRequestMode='new';const idea=document.getElementById('idea')?.value?.trim();db.draft.name=document.getElementById('fName')?.value||db.draft.name;db.draft.mood=document.getElementById('fMood')?.value||db.draft.mood;db.draft.occasion=document.getElementById('fOcc')?.value||db.draft.occasion;save();setRoute('assistant');if(idea)setTimeout(()=>{const p=document.getElementById('aiPrompt');if(p)p.value=idea;askPerfumeAI(idea)},30)}
 function openAIReview(){aiRequestMode='review';const d=`راجع هذه التركيبة الحالية وطورها مع الحفاظ على فكرتها: ${db.draft.name||'بدون اسم'}، الطابع ${db.draft.mood}، الاستخدام ${db.draft.occasion}. المواد الحالية: ${db.draft.notes.map(n=>{const m=MATERIALS.find(x=>x.id===n.id);return m.name+' '+n.pct+'%'}).join('، ')}. أعطني نسخة أكثر توازنًا وثباتًا من نفس مواد المكتبة.`;setRoute('assistant');setTimeout(()=>{const p=document.getElementById('aiPrompt');if(p)p.value=d},30)}
-function render(){view.innerHTML=({home,create,lab,materials,formulas,knowledge,pyramid,favorites,profile,settings,backend:backendPage,supplies,clone:clonePerfume,assistant}[route]||home)();bindDraftInputs()}
+function render(){view.innerHTML=({home,create,lab,materials,formulas,knowledge,pyramid,favorites,profile,settings,backend:backendPage,supplies,clone:clonePerfume,assistant,readiness:readinessPage}[route]||home)();bindDraftInputs()}
 function bindDraftInputs(){['fName','fMood','fOcc'].forEach(id=>{const e=document.getElementById(id);if(!e)return;e.onchange=()=>{if(id==='fName')db.draft.name=e.value;if(id==='fMood')db.draft.mood=e.value;if(id==='fOcc')db.draft.occasion=e.value;save()}});if(route==='lab')requestAnimationFrame(()=>{const p=db.draft.aiPerformance;if(p){setSelectValue('batchClass',p.classId);setSelectValue('conc',nearestConc(p.concentration));setSelectValue('batchLongevity',longevitySelectValue(p.longevity));setSelectValue('batchProjection',p.projection);setSelectValue('perfConc',nearestConc(p.concentration));setSelectValue('perfProjection',p.projection);const l=document.getElementById('perfLongevity');if(l)l.value=String(p.longevity>=12?12:p.longevity>=10?10:p.longevity>=8?8:p.longevity>=6?6:4)}calcBatch()})}
 function totalPct(){return Math.round(db.draft.notes.reduce((a,n)=>a+Number(n.pct||0),0)*10)/10}
 function updatePct(i,v){db.draft.notes[i].pct=Math.max(0,Number(v)||0);save();render()}
@@ -1061,11 +1111,21 @@ function commitBatchUsage(){
  if(issues.length){modalContent.innerHTML=`<h3>المخزون غير كافٍ</h3><p>لا يمكن تسجيل تنفيذ الدفعة قبل معالجة التالي:</p><div class="shortage-list">${issues.map(x=>`<div>• ${esc(x)}</div>`).join('')}</div><button class="ghost wide-btn" onclick="modal.close();setRoute('supplies')">فتح تجهيز مختبري</button><button class="primary wide-btn" onclick="modal.close()">إغلاق</button>`;modal.showModal();return}
  for(const item of pendingBatch.items){const st=db.supplies.find(x=>x.id===materialSupplyId(item.id));st.remaining=Math.max(0,Number(st.remaining)-item.ml)}
  const alcohol=db.supplies.find(x=>x.id==='ethanol');alcohol.remaining=Math.max(0,Number(alcohol.remaining)-(pendingBatch.carrier/1000));
- db.usageHistory.unshift({id:crypto.randomUUID(),date:new Date().toISOString(),name:pendingBatch.name,size:pendingBatch.size,conc:pendingBatch.conc,items:pendingBatch.items.map(x=>({...x})),alcoholMl:pendingBatch.carrier});
- db.usageHistory=db.usageHistory.slice(0,50);save();toast('تم خصم مكونات الدفعة من المخزون');
+ const now=new Date();const jid=crypto.randomUUID();const code='RY-'+now.toISOString().slice(0,10).replace(/-/g,'')+'-'+String(db.batchJournal.length+1).padStart(3,'0');
+ db.usageHistory.unshift({id:jid,date:now.toISOString(),name:pendingBatch.name,size:pendingBatch.size,conc:pendingBatch.conc,items:pendingBatch.items.map(x=>({...x})),alcoholMl:pendingBatch.carrier});
+ db.batchJournal.unshift({id:jid,code,date:now.toISOString(),name:pendingBatch.name,size:pendingBatch.size,conc:pendingBatch.conc,classId:pendingBatch.classId,projection:pendingBatch.projection,items:pendingBatch.items.map(x=>({...x})),alcoholMl:pendingBatch.carrier,status:'قيد النضج',checks:{d1:'',d7:'',d14:'',d30:''}});
+ db.usageHistory=db.usageHistory.slice(0,50);db.batchJournal=db.batchJournal.slice(0,100);save();toast('تم تسجيل الدفعة وبدء سجل النضج');
  document.getElementById('batchResult').innerHTML='<div class="inventory-success">✓ تم تسجيل تنفيذ الدفعة وتحديث كميات الزجاجات.</div>';pendingBatch=null
 }
 
+function openBatchJournal(id){
+ const j=db.batchJournal.find(x=>x.id===id);if(!j)return;
+ const check=(key,label)=>'<div class="journal-check"><b>'+label+'</b><textarea placeholder="سجّل الرائحة، الفوحان، الثبات، الصفاء..." onchange="updateJournalCheck(\''+j.id+'\',\''+key+'\',this.value)">'+esc(j.checks?.[key]||'')+'</textarea></div>';
+ modalContent.innerHTML='<h3>'+esc(j.code)+' — '+esc(j.name)+'</h3><p>'+new Date(j.date).toLocaleString('ar-OM')+' • '+j.size+' ml • '+j.conc+'%</p><div class="journal-status"><label>الحالة</label><select onchange="updateJournalStatus(\''+j.id+'\',this.value)"><option '+(j.status==='قيد النضج'?'selected':'')+'>قيد النضج</option><option '+(j.status==='جاهز للتقييم'?'selected':'')+'>جاهز للتقييم</option><option '+(j.status==='مقبول'?'selected':'')+'>مقبول</option><option '+(j.status==='يحتاج تعديل'?'selected':'')+'>يحتاج تعديل</option></select></div>'+check('d1','بعد 24 ساعة')+check('d7','بعد 7 أيام')+check('d14','بعد 14 يومًا')+check('d30','بعد 30 يومًا')+'<button class="ghost wide-btn" onclick="modal.close()">إغلاق</button>';
+ modal.showModal();
+}
+function updateJournalCheck(id,key,value){const j=db.batchJournal.find(x=>x.id===id);if(!j)return;if(!j.checks)j.checks={};j.checks[key]=value;save()}
+function updateJournalStatus(id,value){const j=db.batchJournal.find(x=>x.id===id);if(!j)return;j.status=value;save()}
 function saveFormula(){if(!db.draft.notes.length)return toast('لا توجد مواد لحفظها');if(Math.abs(totalPct()-100)>0.2)return toast('وازن النسب إلى 100% أولاً');const same=db.formulas.filter(f=>f.baseName===(db.draft.name||'تركيبة خاصة'));const v=`V${same.length+1}`;db.formulas.unshift({id:crypto.randomUUID(),baseName:db.draft.name||'تركيبة خاصة',name:db.draft.name||'تركيبة خاصة',mood:db.draft.mood,occasion:db.draft.occasion,gender:db.draft.gender,notes:structuredClone(db.draft.notes),version:v,versionNotes:document.getElementById('versionNotes')?.value||'',createdAt:new Date().toISOString(),ratings:{projection:0,longevity:0,opening:0,drydown:0},sourcePerfumeName:db.draft.sourcePerfumeName||'',sourcePerfumeImage:db.draft.sourcePerfumeImage||'',sourcePerfumeThumb:db.draft.sourcePerfumeThumb||''});save();setRoute('formulas');toast(`تم حفظ ${v}`)}
 function formulaLevelPct(f,level){return (f.notes||[]).reduce((sum,n)=>sum+(MATERIALS.find(m=>m.id===n.id)?.level===level?Number(n.pct||0):0),0)}
 function formulaInventoryIssues(f){
@@ -1106,7 +1166,7 @@ function materialInfo(id){
  const used=formulasUsingMaterial(id),supply=db.supplies.find(x=>x.id===materialSupplyId(id));
  modalContent.innerHTML='<div class="material-detail-head"><span>'+m.icon+'</span><div><h3>'+esc(m.name)+'</h3><p>'+esc(m.en)+'</p></div></div>'+
  '<div class="grid"><div class="card"><p>الطبقة</p><b>'+esc(m.level)+'</b></div><div class="card"><p>العائلة</p><b>'+esc(m.family)+'</b></div><div class="card"><p>القوة</p><b>'+m.power+'/10</b></div><div class="card"><p>الثبات</p><b>'+m.life+'/10</b></div></div>'+
- '<p style="margin-top:16px">يتناغم مع: '+m.pairs.map(x=>'<span class="tag">'+esc(x)+'</span>').join('')+'</p>'+
+ '<div class="material-safety-note">نوع المادة الفعلي وتركيزها يحدده المورد. راجع IFRA/SDS قبل الاستخدام الجلدي، خصوصًا المواد القوية أو الحمضية/السبايسي.</div><p style="margin-top:16px">يتناغم مع: '+m.pairs.map(x=>'<span class="tag">'+esc(x)+'</span>').join('')+'</p>'+
  '<div class="material-link-status"><span>المخزون</span><b>'+(supply?.bought?formatSupplyAmount(supply):'غير مجهز')+'</b><span>تركيبات محفوظة تستخدمه</span><b>'+used.length+'</b></div>'+
  (used.length?'<div class="material-used-formulas">'+used.slice(0,5).map(f=>'<button onclick="modal.close();openFormula(\''+f.id+'\')">'+esc(f.name)+' '+esc(f.version||'')+'</button>').join('')+'</div>':'')+
  '<div class="actions"><button class="primary" onclick="addMaterial(\''+m.id+'\',5);modal.close();setRoute(\'lab\')">أضف للمختبر</button><button class="secondary" onclick="addToShoppingList(\''+m.id+'\');modal.close();setRoute(\'supplies\')">أضف للتجهيز</button><button class="ghost" onclick="modal.close();setRoute(\'pyramid\')">مكانها في الهرم</button></div>';
