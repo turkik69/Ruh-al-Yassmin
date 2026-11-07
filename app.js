@@ -83,6 +83,7 @@ for(const def of SUPPLY_DEFAULTS){
 if(!Array.isArray(db.usageHistory))db.usageHistory=[];
 if(!Array.isArray(db.batchJournal))db.batchJournal=[];
 if(!db.readiness)db.readiness={safetyDocs:false,ventilation:false,noFlame:false,toolsClean:false};
+if(!db.rawProfiles)db.rawProfiles={};
 if(!Array.isArray(db.cloneArchive))db.cloneArchive=[];
 if(!Array.isArray(db.shoppingList))db.shoppingList=[];
 if(db.draft&&db.draft.aiPerformance===undefined)db.draft.aiPerformance=null;
@@ -409,12 +410,13 @@ function readinessItems(){
   {id:'formula',label:'التركيبة مكتملة ومجموعها 100%',ok:formulaReady,auto:true},
   {id:'pyramid',label:'توجد بنية عطرية مناسبة من طبقات الهرم',ok:hasTop&&hasHeart&&hasBase,auto:true,warn:!(hasTop&&hasHeart&&hasBase)},
   {id:'stock',label:'كل مواد التركيبة مسجلة في المخزون',ok:stockOk,auto:true},
+  {id:'rawProfiles',label:'بيانات المورد وSDS/IFRA موثقة لكل مواد التركيبة',ok:rawProfilesForDraftComplete(),auto:true},
   {id:'ethanol',label:'إيثانول عطري 96% متوفر',ok:!!ethanol?.bought,auto:true},
   {id:'bottle',label:'زجاجة حفظ/عينة متوفرة',ok:bottles,auto:true},
   {id:'toolsClean',label:'الأدوات والعبوة نظيفة وجافة',ok:!!db.readiness.toolsClean},
   {id:'ventilation',label:'مكان العمل جيد التهوية',ok:!!db.readiness.ventilation},
   {id:'noFlame',label:'لا توجد نار/شرر/مصادر حرارة قرب الإيثانول',ok:!!db.readiness.noFlame},
-  {id:'safetyDocs',label:'راجعت IFRA/SDS وتعليمات المورد للمواد المستخدمة',ok:!!db.readiness.safetyDocs}
+  {id:'safetyDocs',label:'راجعت حدود الاستخدام النهائية للمنتج الذي ستصنعه',ok:!!db.readiness.safetyDocs}
  ];
 }
 function readinessPage(){
@@ -427,7 +429,7 @@ function readinessPage(){
 }
 function toggleReadiness(id){if(!(id in db.readiness))return;db.readiness[id]=!db.readiness[id];save();renderKeepScroll()}
 function exportAppData(){
- const payload={app:'Ruh Al Yassmin',version:47,exportedAt:new Date().toISOString(),data:db};
+ const payload={app:'Ruh Al Yassmin',version:48,exportedAt:new Date().toISOString(),data:db};
  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
  const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='ruh-al-yassmin-backup-'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
@@ -1021,6 +1023,7 @@ function startManufacturingGuide(){
  calcBatch();
  const p=manufacturingProfile();
  const ordered=manufacturingOrderedNotes(p.oil);
+ const missingProfiles=ordered.filter(x=>!rawProfileCompleteness(x.id));
  const box=document.getElementById('manufacturingGuide');if(!box)return;
  const steps=[];
  steps.push('<div class="mix-step"><span class="step-no">1</span><div><b>جهّز الأدوات والعبوة</b><p>استخدم زجاجًا نظيفًا وجافًا، ماصة/سرنجة مدرجة أو ميزانًا مناسبًا. اعمل في مكان جيد التهوية وبعيدًا تمامًا عن النار والشرر لأن الإيثانول 96% شديد الاشتعال.</p></div></div>');
@@ -1035,7 +1038,7 @@ function startManufacturingGuide(){
  steps.push('<div class="mix-step ethanol"><span class="step-no">'+step+++'</span><div><b>أضف إيثانول 96% تدريجيًا — '+p.ethanolMl.toFixed(2)+' ml</b><p>أضفه على دفعات إلى الخلاصة مع تحريك لطيف. الحساب مبني على حجم '+p.size+' ml وتركيز خلاصة '+p.conc+'%'+(p.dpgPct?' مع DPG '+p.dpgPct+'%':'')+'. لا تضف ماءً عشوائيًا لأن بعض التركيبات قد تتعكر.</p></div></div>');
  steps.push('<div class="mix-step"><span class="step-no">'+step+++'</span><div><b>الراحة والنضج</b><p>أغلق العبوة واحفظها بعيدًا عن الضوء والحرارة. ابدأ التقييم بعد عدة أيام، وغالبًا تتحسن الصورة العطرية خلال 1–2 أسبوع وقد تحتاج بعض التركيبات وقتًا أطول.</p></div></div>');
  steps.push('<div class="mix-step"><span class="step-no">'+step+++'</span><div><b>افحص الصفاء ثم عبّئ</b><p>إذا ظهرت عكارة أو رواسب، لا تضف مزيدًا من المذيبات عشوائيًا؛ اختبر عينة صغيرة أولًا ويمكن ترشيحها عند الحاجة. دوّن التاريخ والتركيز والإصدار على الملصق.</p></div></div>');
- box.innerHTML='<section class="manufacturing-guide"><div class="panel-heading"><div><span class="mini-label">دليل تصنيع مخصص لهذه التركيبة</span><h3>'+esc(db.draft.name||'العطر الحالي')+'</h3></div><span class="panel-icon">🧪</span></div><div class="mix-summary"><div><span>الحجم النهائي</span><b>'+p.size+' ml</b></div><div><span>الخلاصة العطرية</span><b>'+p.oil.toFixed(2)+' ml</b></div><div><span>إيثانول 96%</span><b>'+p.ethanolMl.toFixed(2)+' ml</b></div><div><span>DPG</span><b>'+(p.dpgPct?p.dpgMl.toFixed(2)+' ml اختياري':'غير مطلوب افتراضيًا')+'</b></div></div><div class="mix-order-note"><b>ترتيب عملي مقترح:</b> القاعدة ← القلب ← الافتتاحية. هذا ترتيب عمل يساعدك على المتابعة وليس شرطًا كيميائيًا لصحة العطر؛ الأهم القياس الدقيق والمزج الجيد.</div><div class="mix-step-list">'+steps.join('')+'</div><div class="safety-note manufacturing-safety">للمنتج الجلدي: راجع حدود IFRA وSDS وتعليمات المورد لكل مادة. اختبر دفعة صغيرة أولًا، ولا تعتمد على وصفة التطبيق كإثبات سلامة نهائي.</div></section>';
+ box.innerHTML='<section class="manufacturing-guide">'+(missingProfiles.length?'<div class="mix-profile-warning"><b>ملفات خامات ناقصة</b><p>قبل الاستخدام الجلدي وثّق المورد وSDS/IFRA لهذه المواد: '+missingProfiles.map(x=>esc(x.m?.name||x.id)).join('، ')+'</p></div>':'')+'<div class="panel-heading"><div><span class="mini-label">دليل تصنيع مخصص لهذه التركيبة</span><h3>'+esc(db.draft.name||'العطر الحالي')+'</h3></div><span class="panel-icon">🧪</span></div><div class="mix-summary"><div><span>الحجم النهائي</span><b>'+p.size+' ml</b></div><div><span>الخلاصة العطرية</span><b>'+p.oil.toFixed(2)+' ml</b></div><div><span>إيثانول 96%</span><b>'+p.ethanolMl.toFixed(2)+' ml</b></div><div><span>DPG</span><b>'+(p.dpgPct?p.dpgMl.toFixed(2)+' ml اختياري':'غير مطلوب افتراضيًا')+'</b></div></div><div class="mix-order-note"><b>ترتيب عملي مقترح:</b> القاعدة ← القلب ← الافتتاحية. هذا ترتيب عمل يساعدك على المتابعة وليس شرطًا كيميائيًا لصحة العطر؛ الأهم القياس الدقيق والمزج الجيد.</div><div class="mix-step-list">'+steps.join('')+'</div><div class="safety-note manufacturing-safety">للمنتج الجلدي: راجع حدود IFRA وSDS وتعليمات المورد لكل مادة. اختبر دفعة صغيرة أولًا، ولا تعتمد على وصفة التطبيق كإثبات سلامة نهائي.</div></section>';
  box.scrollIntoView({behavior:'smooth',block:'start'});
 }
 window.startManufacturingGuide=startManufacturingGuide;
@@ -1161,6 +1164,31 @@ function loadFormulaForGoal(id,goal){
 }
 function loadFormula(id){const f=db.formulas.find(x=>x.id===id);db.draft={name:f.name,mood:f.mood,occasion:f.occasion,gender:f.gender,notes:structuredClone(f.notes),sourcePerfumeName:f.sourcePerfumeName||'',sourcePerfumeImage:f.sourcePerfumeImage||'',sourcePerfumeThumb:f.sourcePerfumeThumb||''};save();modal.close();setRoute('lab')}
 function deleteFormula(id){db.formulas=db.formulas.filter(x=>x.id!==id);save();modal.close();render();toast('تم حذف التركيبة')}
+function rawProfileFor(id){
+ if(!db.rawProfiles[id])db.rawProfiles[id]={supplier:'',lot:'',cas:'',density:'',openedAt:'',expiresAt:'',sds:false,ifra:false,maxUse:'',notes:''};
+ return db.rawProfiles[id];
+}
+function saveRawProfile(id){
+ const p=rawProfileFor(id);
+ p.supplier=document.getElementById('rpSupplier')?.value?.trim()||'';
+ p.lot=document.getElementById('rpLot')?.value?.trim()||'';
+ p.cas=document.getElementById('rpCas')?.value?.trim()||'';
+ p.density=document.getElementById('rpDensity')?.value?.trim()||'';
+ p.openedAt=document.getElementById('rpOpened')?.value||'';
+ p.expiresAt=document.getElementById('rpExpires')?.value||'';
+ p.maxUse=document.getElementById('rpMaxUse')?.value?.trim()||'';
+ p.notes=document.getElementById('rpNotes')?.value?.trim()||'';
+ p.sds=!!document.getElementById('rpSds')?.checked;
+ p.ifra=!!document.getElementById('rpIfra')?.checked;
+ save();toast('تم حفظ ملف الخامة');materialInfo(id);
+}
+function rawProfileCompleteness(id){
+ const p=db.rawProfiles?.[id];if(!p)return false;
+ return !!(p.supplier&&p.lot&&p.sds&&p.ifra);
+}
+function rawProfilesForDraftComplete(){
+ return db.draft.notes.length>0&&db.draft.notes.every(n=>rawProfileCompleteness(n.id));
+}
 function materialInfo(id){
  const m=MATERIALS.find(x=>x.id===id);if(!m)return;
  const used=formulasUsingMaterial(id),supply=db.supplies.find(x=>x.id===materialSupplyId(id));
@@ -1168,6 +1196,7 @@ function materialInfo(id){
  '<div class="grid"><div class="card"><p>الطبقة</p><b>'+esc(m.level)+'</b></div><div class="card"><p>العائلة</p><b>'+esc(m.family)+'</b></div><div class="card"><p>القوة</p><b>'+m.power+'/10</b></div><div class="card"><p>الثبات</p><b>'+m.life+'/10</b></div></div>'+
  '<div class="material-safety-note">نوع المادة الفعلي وتركيزها يحدده المورد. راجع IFRA/SDS قبل الاستخدام الجلدي، خصوصًا المواد القوية أو الحمضية/السبايسي.</div><p style="margin-top:16px">يتناغم مع: '+m.pairs.map(x=>'<span class="tag">'+esc(x)+'</span>').join('')+'</p>'+
  '<div class="material-link-status"><span>المخزون</span><b>'+(supply?.bought?formatSupplyAmount(supply):'غير مجهز')+'</b><span>تركيبات محفوظة تستخدمه</span><b>'+used.length+'</b></div>'+
+ (()=>{const p=rawProfileFor(id);return '<section class="raw-profile"><div class="panel-heading"><div><span class="mini-label">ملف الخامة الفعلية</span><h4>بيانات العبوة والمورد</h4></div><span class="profile-badge '+(rawProfileCompleteness(id)?'ok':'pending')+'">'+(rawProfileCompleteness(id)?'موثق':'ناقص')+'</span></div><div class="raw-profile-grid"><label>المورد<input id="rpSupplier" value="'+esc(p.supplier)+'" placeholder="اسم المورد"></label><label>رقم التشغيلة / Lot<input id="rpLot" value="'+esc(p.lot)+'" placeholder="Lot / Batch"></label><label>CAS إن وجد<input id="rpCas" value="'+esc(p.cas)+'" placeholder="CAS"></label><label>الكثافة g/ml<input id="rpDensity" inputmode="decimal" value="'+esc(p.density)+'" placeholder="مثال 0.91"></label><label>تاريخ الفتح<input id="rpOpened" type="date" value="'+esc(p.openedAt)+'"></label><label>الانتهاء / إعادة الاختبار<input id="rpExpires" type="date" value="'+esc(p.expiresAt)+'"></label><label>الحد الأقصى من المورد/IFRA %<input id="rpMaxUse" inputmode="decimal" value="'+esc(p.maxUse)+'" placeholder="إن كان متوفرًا"></label><label class="raw-check"><input id="rpSds" type="checkbox" '+(p.sds?'checked':'')+'> SDS تمت مراجعته</label><label class="raw-check"><input id="rpIfra" type="checkbox" '+(p.ifra?'checked':'')+'> IFRA/قيود المورد تمت مراجعتها</label><label class="raw-notes">ملاحظات<textarea id="rpNotes" placeholder="نوع الاستخلاص، بلد المنشأ، FCF، تخفيف مسبق...">'+esc(p.notes)+'</textarea></label></div><button class="secondary wide-btn" onclick="saveRawProfile(\''+id+'\')">حفظ ملف الخامة</button></section>'})();
  (used.length?'<div class="material-used-formulas">'+used.slice(0,5).map(f=>'<button onclick="modal.close();openFormula(\''+f.id+'\')">'+esc(f.name)+' '+esc(f.version||'')+'</button>').join('')+'</div>':'')+
  '<div class="actions"><button class="primary" onclick="addMaterial(\''+m.id+'\',5);modal.close();setRoute(\'lab\')">أضف للمختبر</button><button class="secondary" onclick="addToShoppingList(\''+m.id+'\');modal.close();setRoute(\'supplies\')">أضف للتجهيز</button><button class="ghost" onclick="modal.close();setRoute(\'pyramid\')">مكانها في الهرم</button></div>';
  modal.showModal();
